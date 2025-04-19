@@ -31,6 +31,8 @@ wp-config.php
 
 # Log files
 *.log
+*.DS_Store
+.gitignore
 
 # htaccess
 /.htaccess
