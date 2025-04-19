@@ -42,6 +42,7 @@ package.json
 phpstan.neon
 composer.json
 node_modules/
+package-lock.json
 
 # htaccess
 /.htaccess
