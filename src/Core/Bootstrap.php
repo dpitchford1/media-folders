@@ -4,70 +4,62 @@ declare(strict_types=1);
 
 namespace MediaFolders\Core;
 
-use Psr\Container\ContainerInterface;
+use MediaFolders\Providers\DatabaseServiceProvider;
 
-/**
- * Plugin Bootstrap
- *
- * @package MediaFolders\Core
- * @since 2.0.0
- */
 class Bootstrap
 {
     /**
-     * The dependency injection container.
-     *
-     * @var ContainerInterface
+     * @var Container
      */
-    private ContainerInterface $container;
+    private Container $container;
 
     /**
-     * Constructor.
-     *
-     * @param ContainerInterface $container The dependency injection container
+     * @var array
      */
-    public function __construct(ContainerInterface $container)
+    private array $providers = [
+        DatabaseServiceProvider::class,
+    ];
+
+    public function __construct()
     {
-        $this->container = $container;
+        $this->container = new Container();
+        $this->registerProviders();
+        $this->bootProviders();
     }
 
     /**
-     * Initialize the plugin.
+     * Register service providers.
      *
      * @return void
      */
-    public function init(): void
+    private function registerProviders(): void
     {
-        $this->registerServices();
-        $this->initializeComponents();
+        foreach ($this->providers as $provider) {
+            $provider = new $provider();
+            $provider->register($this->container);
+        }
     }
 
     /**
-     * Register service bindings in the container.
+     * Boot service providers.
      *
      * @return void
      */
-    private function registerServices(): void
+    private function bootProviders(): void
     {
-        // Register core services
-        $this->container->singleton(Plugin::class);
-        
-        // Database services will be registered here
-        
-        // Admin services will be registered here
-        
-        // API services will be registered here
+        foreach ($this->providers as $provider) {
+            $provider = new $provider();
+            $provider->boot($this->container);
+        }
     }
 
     /**
-     * Initialize plugin components.
+     * Get the service container.
      *
-     * @return void
+     * @return Container
      */
-    private function initializeComponents(): void
+    public function getContainer(): Container
     {
-        // Initialize the main plugin class
-        $plugin = $this->container->get(Plugin::class);
-        $plugin->boot();
+        return $this->container;
     }
 }
