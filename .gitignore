@@ -37,6 +37,9 @@ wp-config.php
 .gitignore
 composer.lock
 package.json
+.github
+.vscode
+phpstan.neon
 
 # htaccess
 /.htaccess
