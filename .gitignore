@@ -17,6 +17,8 @@
 /wp-*.php
 /xmlrpc.php
 
+/vendor
+
 # Configuration
 wp-config.php
 
@@ -33,6 +35,8 @@ wp-config.php
 *.log
 *.DS_Store
 .gitignore
+composer.lock
+package.json
 
 # htaccess
 /.htaccess
