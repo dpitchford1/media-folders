@@ -41,6 +41,7 @@ package.json
 .vscode
 phpstan.neon
 composer.json
+node_modules/
 
 # htaccess
 /.htaccess
