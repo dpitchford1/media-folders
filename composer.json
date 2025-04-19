@@ -18,7 +18,10 @@
         "squizlabs/php_codesniffer": "^3.7",
         "wp-coding-standards/wpcs": "^3.0",
         "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
-        "phpstan/phpstan": "^1.10"
+        "phpstan/phpstan": "^1.10",
+        "yoast/phpunit-polyfills": "^1.0",
+        "wp-phpunit/wp-phpunit": "^6.5",
+        "brain/monkey": "^2.6"
     },
     "autoload": {
         "psr-4": {
@@ -32,6 +35,7 @@
     },
     "scripts": {
         "test": "phpunit",
+        "test:coverage": "phpunit --coverage-html tests/coverage",
         "phpcs": "phpcs",
         "phpstan": "phpstan analyse",
         "check": [
