@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MediaFolders\Core;
 
 use MediaFolders\Providers\DatabaseServiceProvider;
+use MediaFolders\Providers\EventServiceProvider;
 use MediaFolders\Providers\HttpServiceProvider;
 
 class Bootstrap
@@ -19,6 +20,7 @@ class Bootstrap
      */
     private array $providers = [
         DatabaseServiceProvider::class,
+        EventServiceProvider::class,
         HttpServiceProvider::class,
     ];
 
