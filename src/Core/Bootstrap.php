@@ -15,6 +15,7 @@ class Bootstrap
 
     public function init(): void
     {
+        error_log('Media Folders Bootstrap init() called');
         $this->registerServices();
         $this->initializeWordPress();
     }
@@ -40,20 +41,10 @@ class Bootstrap
 
     private function initializeWordPress(): void
     {
-        // Add menu page
-        add_action('admin_menu', function() {
-            add_media_page(
-                'Media Folders',
-                'Folders',
-                'upload_files',
-                'media-folders',
-                function() {
-                    $page = new \MediaFolders\Admin\AdminPage(
-                        $this->container->get(\MediaFolders\Database\Contracts\FolderRepositoryInterface::class)
-                    );
-                    $page->render();
-                }
-            );
-        });
+        // Initialize admin page
+        $adminPage = new \MediaFolders\Admin\AdminPage(
+            $this->container->get(\MediaFolders\Database\Contracts\FolderRepositoryInterface::class)
+        );
+        $adminPage->init();
     }
 }

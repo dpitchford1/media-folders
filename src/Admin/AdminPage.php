@@ -130,6 +130,20 @@ class AdminPage
      */
     private function getAssetUrl(string $path): string
     {
+        // For JS files, always look in build directory
+        if (strpos($path, 'js/') === 0) {
+            return plugins_url('build/' . basename($path), dirname(__DIR__));
+        }
+        
+        // For CSS files, check if built version exists, otherwise use assets
+        if (strpos($path, 'css/') === 0) {
+            $builtCss = 'build/' . basename($path);
+            if (file_exists(dirname(__DIR__, 2) . '/' . $builtCss)) {
+                return plugins_url($builtCss, dirname(__DIR__));
+            }
+            return plugins_url('assets/' . $path, dirname(__DIR__));
+        }
+        
         return plugins_url('assets/' . $path, dirname(__DIR__));
     }
 }
