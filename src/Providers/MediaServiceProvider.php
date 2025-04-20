@@ -11,23 +11,23 @@ use MediaFolders\Core\MediaHandler;
 use MediaFolders\Core\ImageIndexing\ImageIndexer;
 use MediaFolders\Core\ImageIndexing\IndexProgress;
 use MediaFolders\Database\Contracts\AttachmentRepositoryInterface;
+use MediaFolders\Http\RestRouter; // Add this
+use MediaFolders\Database\Contracts\FolderRepositoryInterface; // Add this
 
-/**
- * Media Service Provider
- * 
- * @package MediaFolders\Providers
- * @author dpitchford1
- * @since 2.0.0
- * @created 2025-04-19 20:41:42
- */
 class MediaServiceProvider implements ServiceProviderInterface
 {
-    /**
-     * {@inheritDoc}
-     */
     public function register(Container $container): void
     {
-        // Register core media services
+        // First, register the RestRouter
+        $container->singleton(RestRouter::class, function($container) {
+            error_log('MediaFolders: Registering RestRouter in container');
+            return new RestRouter(
+                $container->get(FolderRepositoryInterface::class),
+                $container->get(AttachmentRepositoryInterface::class)
+            );
+        });
+
+        // Your existing registrations...
         $container->singleton(MediaHandler::class, function($container) {
             return new MediaHandler(
                 $container->get(CacheInterface::class),
@@ -35,7 +35,6 @@ class MediaServiceProvider implements ServiceProviderInterface
             );
         });
 
-        // Register image indexing services
         $container->singleton(ImageIndexer::class, function($container) {
             return new ImageIndexer(
                 $container->get(CacheInterface::class),
@@ -48,22 +47,30 @@ class MediaServiceProvider implements ServiceProviderInterface
         });
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function boot(Container $container): void
     {
-        // Initialize image indexer
+        // Register REST routes first
+        add_action('rest_api_init', function() use ($container) {
+            error_log('MediaFolders: rest_api_init hook fired');
+            try {
+                $router = $container->get(RestRouter::class);
+                error_log('MediaFolders: Got router instance');
+                $router->register();
+                error_log('MediaFolders: Routes registered successfully');
+            } catch (\Exception $e) {
+                error_log('MediaFolders ERROR: ' . $e->getMessage());
+            }
+        }, 10);
+
+        // Your existing boot code...
         $indexer = $container->get(ImageIndexer::class);
         $indexer->init();
 
-        // Register hooks for media operations
         add_action('add_attachment', function($attachmentId) use ($container) {
             $indexer = $container->get(ImageIndexer::class);
             wp_schedule_single_event(time(), 'media_folders_process_image_index');
         });
 
-        // Add admin notice for indexing progress
         add_action('admin_notices', function() use ($container) {
             if (!current_user_can('manage_options')) {
                 return;

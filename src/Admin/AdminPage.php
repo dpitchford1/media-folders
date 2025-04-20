@@ -72,6 +72,10 @@ class AdminPage
             [],
             self::ASSETS_VERSION
         );
+        wp_enqueue_script('wp-api-fetch');
+        wp_enqueue_script('wp-element');
+        wp_enqueue_script('wp-components');
+        wp_enqueue_script('wp-i18n');
 
         wp_enqueue_script(
             'media-folders-admin',
