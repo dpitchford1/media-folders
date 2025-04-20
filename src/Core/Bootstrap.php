@@ -26,5 +26,39 @@ class Bootstrap
         AdminServiceProvider::class,
     ];
 
-    // ... rest of the class remains the same
+    /**
+     * Bootstrap constructor.
+     *
+     * @param Container $container
+     */
+    public function __construct(Container $container)
+    {
+        $this->container = $container;
+    }
+
+    /**
+     * Initialize the application.
+     *
+     * @return void
+     */
+    public function init(): void
+    {
+        // Register service providers
+        foreach ($this->providers as $provider) {
+            if (class_exists($provider)) {
+                $providerInstance = new $provider();
+                $providerInstance->register($this->container);
+            }
+        }
+
+        // Boot service providers
+        foreach ($this->providers as $provider) {
+            if (class_exists($provider)) {
+                $providerInstance = new $provider();
+                if (method_exists($providerInstance, 'boot')) {
+                    $providerInstance->boot($this->container);
+                }
+            }
+        }
+    }
 }

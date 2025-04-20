@@ -11,7 +11,8 @@
     ],
     "require": {
         "php": ">=7.4",
-        "composer/installers": "^2.0"
+        "composer/installers": "^2.0",
+        "psr/container": "^2.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^9.0",
@@ -29,25 +30,6 @@
         "psr-4": {
             "MediaFolders\\": "src/"
         }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "MediaFolders\\Tests\\": "tests/"
-        }
-    },
-    "scripts": {
-        "test": "phpunit",
-        "test:coverage": "phpunit --coverage-html tests/coverage",
-        "phpcs": "phpcs",
-        "phpstan": "phpstan analyse",
-        "check": [
-            "@phpcs",
-            "@phpstan",
-            "@test"
-        ],
-        "install-wp-tests": [
-            "bash bin/install-wp-tests.sh wordpress_test root '' localhost latest"
-        ]
     },
     "config": {
         "allow-plugins": {

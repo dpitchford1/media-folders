@@ -7,7 +7,7 @@ module.exports = {
         admin: path.resolve(__dirname, 'assets/js/admin.js'),
     },
     output: {
-        path: path.resolve(__dirname, 'assets/build'),
+        path: path.resolve(__dirname, 'build'),
         filename: '[name].js',
     },
 };
