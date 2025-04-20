@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace MediaFolders\Core;
 
 use Closure;
+use ReflectionClass;
+use ReflectionException;
 use InvalidArgumentException;
 use Psr\Container\ContainerInterface;
 
@@ -49,28 +51,65 @@ class Container implements ContainerInterface
      *
      * @param string $id
      * @return mixed
+     * @throws ReflectionException
      */
     public function get(string $id)
     {
-        if ($this->has($id)) {
-            if (isset($this->instances[$id])) {
-                return $this->instances[$id];
-            }
-
-            $concrete = $this->bindings[$id] ?? $id;
-            
-            if ($concrete instanceof Closure) {
-                $instance = $concrete($this);
-            } else {
-                $instance = new $concrete();
-            }
-
-            $this->instances[$id] = $instance;
-
-            return $instance;
+        if (isset($this->instances[$id])) {
+            return $this->instances[$id];
         }
 
-        throw new InvalidArgumentException("No binding found for {$id}");
+        $concrete = $this->bindings[$id] ?? $id;
+
+        if ($concrete instanceof Closure) {
+            $instance = $concrete($this);
+        } else {
+            $instance = $this->build($concrete);
+        }
+
+        // If this is a singleton, store the instance
+        if (isset($this->bindings[$id])) {
+            $this->instances[$id] = $instance;
+        }
+
+        return $instance;
+    }
+
+    /**
+     * Build a concrete instance with dependencies.
+     *
+     * @param string $concrete
+     * @return mixed
+     * @throws ReflectionException
+     */
+    private function build(string $concrete)
+    {
+        $reflector = new ReflectionClass($concrete);
+
+        if (!$reflector->isInstantiable()) {
+            throw new InvalidArgumentException("Class {$concrete} is not instantiable");
+        }
+
+        $constructor = $reflector->getConstructor();
+
+        if (is_null($constructor)) {
+            return new $concrete();
+        }
+
+        $dependencies = [];
+        foreach ($constructor->getParameters() as $parameter) {
+            if ($parameter->getType() && !$parameter->getType()->isBuiltin()) {
+                $dependencies[] = $this->get($parameter->getType()->getName());
+            } else if ($parameter->isDefaultValueAvailable()) {
+                $dependencies[] = $parameter->getDefaultValue();
+            } else {
+                throw new InvalidArgumentException(
+                    "Cannot resolve parameter {$parameter->getName()} of class {$concrete}"
+                );
+            }
+        }
+
+        return $reflector->newInstanceArgs($dependencies);
     }
 
     /**

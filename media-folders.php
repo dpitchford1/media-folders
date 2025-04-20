@@ -12,8 +12,6 @@
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: media-folders
  * Domain Path: /languages
- *
- * @package MediaFolders
  */
 
 declare(strict_types=1);
@@ -22,43 +20,63 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Plugin version.
-if (!defined('MEDIA_FOLDERS_VERSION')) {
-    define('MEDIA_FOLDERS_VERSION', '2.0.0');
+// Define plugin constants
+define('MEDIA_FOLDERS_VERSION', '2.0.0');
+define('MEDIA_FOLDERS_FILE', __FILE__);
+define('MEDIA_FOLDERS_PATH', plugin_dir_path(__FILE__));
+define('MEDIA_FOLDERS_URL', plugin_dir_url(__FILE__));
+
+// Composer autoloader
+$autoloader = __DIR__ . '/vendor/autoload.php';
+
+if (!file_exists($autoloader)) {
+    add_action('admin_notices', function() {
+        $message = sprintf(
+            /* translators: %s: Composer command */
+            __('Media Folders requires Composer autoloader. Please run: %s', 'media-folders'),
+            '<code>composer install</code>'
+        );
+        printf('<div class="notice notice-error"><p>%s</p></div>', wp_kses_post($message));
+    });
+    return;
 }
 
-// Plugin base path.
-if (!defined('MEDIA_FOLDERS_PATH')) {
-    define('MEDIA_FOLDERS_PATH', plugin_dir_path(__FILE__));
+try {
+    require_once $autoloader;
+} catch (Throwable $e) {
+    add_action('admin_notices', function() use ($e) {
+        $message = sprintf(
+            /* translators: %s: Error message */
+            __('Media Folders autoloader error: %s', 'media-folders'),
+            $e->getMessage()
+        );
+        printf('<div class="notice notice-error"><p>%s</p></div>', esc_html($message));
+    });
+    return;
 }
 
-// Plugin base URL.
-if (!defined('MEDIA_FOLDERS_URL')) {
-    define('MEDIA_FOLDERS_URL', plugin_dir_url(__FILE__));
-}
-
-// Autoload dependencies.
-if (file_exists(__DIR__ . '/vendor/autoload.php')) {
-    require_once __DIR__ . '/vendor/autoload.php';
-}
-
-// Bootstrap the plugin.
+// Initialize plugin
 add_action('plugins_loaded', function() {
     try {
+        // Basic class existence check
+        if (!class_exists('MediaFolders\\Core\\Container')) {
+            throw new RuntimeException('Core classes not found. Please check autoloader configuration.');
+        }
+
         $container = new MediaFolders\Core\Container();
-        $container->singleton(MediaFolders\Core\Container::class, $container);
-        
         $bootstrap = new MediaFolders\Core\Bootstrap($container);
         $bootstrap->init();
-    } catch (Exception $e) {
-        // Log error and display admin notice
+    } catch (Throwable $e) {
         add_action('admin_notices', function() use ($e) {
             $message = sprintf(
                 /* translators: %s: Error message */
-                __('Media Folders Error: %s', 'media-folders'),
+                __('Media Folders initialization error: %s', 'media-folders'),
                 $e->getMessage()
             );
             printf('<div class="notice notice-error"><p>%s</p></div>', esc_html($message));
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                printf('<div class="notice notice-error"><pre>%s</pre></div>', esc_html($e->getTraceAsString()));
+            }
         });
     }
-});
+}, 5);

@@ -7,6 +7,7 @@ namespace MediaFolders\Providers;
 use MediaFolders\Admin\AdminPage;
 use MediaFolders\Core\Container;
 use MediaFolders\Core\Contracts\ServiceProviderInterface;
+use MediaFolders\Database\Contracts\FolderRepositoryInterface;
 
 class AdminServiceProvider implements ServiceProviderInterface
 {
@@ -15,7 +16,11 @@ class AdminServiceProvider implements ServiceProviderInterface
      */
     public function register(Container $container): void
     {
-        $container->singleton(AdminPage::class);
+        $container->singleton(AdminPage::class, function(Container $container) {
+            return new AdminPage(
+                $container->get(FolderRepositoryInterface::class)
+            );
+        });
     }
 
     /**
