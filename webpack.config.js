@@ -4,10 +4,13 @@ const defaultConfig = require('@wordpress/scripts/config/webpack.config');
 module.exports = {
     ...defaultConfig,
     entry: {
-        admin: path.resolve(__dirname, 'assets/js/admin.js'),
+        admin: [
+            path.resolve(__dirname, 'assets/js/admin.js'),
+            path.resolve(__dirname, 'assets/css/admin.css')
+        ]
     },
     output: {
-        path: path.resolve(__dirname, 'build'),  // This will output to /build/ directly
-        filename: '[name].js',
-    },
+        path: path.resolve(__dirname, 'build'),
+        filename: '[name].js'
+    }
 };
