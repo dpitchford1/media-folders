@@ -2,10 +2,11 @@
   "name": "media-folders",
   "version": "2.0.0",
   "description": "WordPress Media Folders Plugin - Efficient media library organization",
-  "scripts": {
+ "scripts": {
     "build": "wp-scripts build",
     "dist": "npm run build && node scripts/build-dist.js",
-    "start": "wp-scripts start",
+    "start": "wp-scripts start", 
+    "dev": "wp-scripts start",
     "lint:js": "wp-scripts lint-js",
     "lint:css": "wp-scripts lint-style",
     "format:js": "wp-scripts format-js",
@@ -13,8 +14,11 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:update": "jest --updateSnapshot"
-  },
+    "test:update": "jest --updateSnapshot",
+    "test:all": "npm run lint:js && npm run lint:css && npm run test"
+},
+
+
   "author": "David Pitchford",
   "license": "GPL-2.0-or-later",
   "dependencies": {
