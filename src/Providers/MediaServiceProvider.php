@@ -71,7 +71,14 @@ class MediaServiceProvider implements ServiceProviderInterface
             wp_schedule_single_event(time(), 'media_folders_process_image_index');
         });
 
+        // Inside the boot method, modify the admin_notices action:
         add_action('admin_notices', function() use ($container) {
+            // Only show on media pages or our plugin page
+            $screen = get_current_screen();
+            if (!$screen || !in_array($screen->id, ['upload', 'media_page_media-folders'])) {
+                return;
+            }
+
             if (!current_user_can('manage_options')) {
                 return;
             }
