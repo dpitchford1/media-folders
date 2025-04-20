@@ -16,6 +16,7 @@
 /readme.html
 /wp-*.php
 /xmlrpc.php
+build/
 
 /vendor
 
@@ -36,12 +37,15 @@ wp-config.php
 *.DS_Store
 .gitignore
 composer.lock
-package.json
+
 .github
 .vscode
 phpstan.neon
 composer.json
 node_modules/
+package-lock.json
+
+dist/
 
 # htaccess
 /.htaccess
