@@ -4,81 +4,56 @@ declare(strict_types=1);
 
 namespace MediaFolders\Core;
 
-use MediaFolders\Providers\AdminServiceProvider;
-use MediaFolders\Providers\DatabaseServiceProvider;
-use MediaFolders\Providers\EventServiceProvider;
-use MediaFolders\Providers\HttpServiceProvider;
-use MediaFolders\Core\Contracts\ServiceProviderInterface;
-
 class Bootstrap
 {
-    /**
-     * @var Container
-     */
     private Container $container;
 
-    /**
-     * @var ServiceProviderInterface[]
-     */
-    private array $providers = [
-        DatabaseServiceProvider::class,
-        EventServiceProvider::class,
-        HttpServiceProvider::class,
-        AdminServiceProvider::class,
-    ];
-
-    /**
-     * Bootstrap constructor.
-     *
-     * @param Container $container
-     */
     public function __construct(Container $container)
     {
         $this->container = $container;
     }
 
-    /**
-     * Initialize the application.
-     *
-     * @return void
-     */
     public function init(): void
     {
-        $this->registerServiceProviders();
-        $this->bootServiceProviders();
+        $this->registerServices();
+        $this->initializeWordPress();
     }
 
-    /**
-     * Register service providers.
-     *
-     * @return void
-     */
-    private function registerServiceProviders(): void
+    private function registerServices(): void
     {
-        foreach ($this->providers as $providerClass) {
-            if (class_exists($providerClass)) {
-                $provider = new $providerClass();
-                if ($provider instanceof ServiceProviderInterface) {
-                    $provider->register($this->container);
-                }
+        // Register core services
+        global $wpdb;
+        
+        $this->container->singleton(Container::class, $this->container);
+        
+        // Register database services
+        $this->container->singleton('wpdb', $wpdb);
+        
+        // Register repositories
+        $this->container->bind(
+            \MediaFolders\Database\Contracts\FolderRepositoryInterface::class,
+            function($container) {
+                return new \MediaFolders\Database\FolderRepository($container->get('wpdb'));
             }
-        }
+        );
     }
 
-    /**
-     * Boot service providers.
-     *
-     * @return void
-     */
-    private function bootServiceProviders(): void
+    private function initializeWordPress(): void
     {
-        foreach ($this->providers as $providerClass) {
-            if (class_exists($providerClass)) {
-                $provider = new $providerClass();
-                if ($provider instanceof ServiceProviderInterface) {
-                    $provider->boot($this->container);
+        // Add menu page
+        add_action('admin_menu', function() {
+            add_media_page(
+                'Media Folders',
+                'Folders',
+                'upload_files',
+                'media-folders',
+                function() {
+                    $page = new \MediaFolders\Admin\AdminPage(
+                        $this->container->get(\MediaFolders\Database\Contracts\FolderRepositoryInterface::class)
+                    );
+                    $page->render();
                 }
-            }
-        }
+            );
+        });
     }
 }
