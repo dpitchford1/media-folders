@@ -8,6 +8,7 @@ use MediaFolders\Providers\AdminServiceProvider;
 use MediaFolders\Providers\DatabaseServiceProvider;
 use MediaFolders\Providers\EventServiceProvider;
 use MediaFolders\Providers\HttpServiceProvider;
+use MediaFolders\Core\Contracts\ServiceProviderInterface;
 
 class Bootstrap
 {
@@ -17,7 +18,7 @@ class Bootstrap
     private Container $container;
 
     /**
-     * @var array
+     * @var ServiceProviderInterface[]
      */
     private array $providers = [
         DatabaseServiceProvider::class,
@@ -43,20 +44,39 @@ class Bootstrap
      */
     public function init(): void
     {
-        // Register service providers
-        foreach ($this->providers as $provider) {
-            if (class_exists($provider)) {
-                $providerInstance = new $provider();
-                $providerInstance->register($this->container);
+        $this->registerServiceProviders();
+        $this->bootServiceProviders();
+    }
+
+    /**
+     * Register service providers.
+     *
+     * @return void
+     */
+    private function registerServiceProviders(): void
+    {
+        foreach ($this->providers as $providerClass) {
+            if (class_exists($providerClass)) {
+                $provider = new $providerClass();
+                if ($provider instanceof ServiceProviderInterface) {
+                    $provider->register($this->container);
+                }
             }
         }
+    }
 
-        // Boot service providers
-        foreach ($this->providers as $provider) {
-            if (class_exists($provider)) {
-                $providerInstance = new $provider();
-                if (method_exists($providerInstance, 'boot')) {
-                    $providerInstance->boot($this->container);
+    /**
+     * Boot service providers.
+     *
+     * @return void
+     */
+    private function bootServiceProviders(): void
+    {
+        foreach ($this->providers as $providerClass) {
+            if (class_exists($providerClass)) {
+                $provider = new $providerClass();
+                if ($provider instanceof ServiceProviderInterface) {
+                    $provider->boot($this->container);
                 }
             }
         }

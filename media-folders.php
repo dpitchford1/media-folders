@@ -46,6 +46,8 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 add_action('plugins_loaded', function() {
     try {
         $container = new MediaFolders\Core\Container();
+        $container->singleton(MediaFolders\Core\Container::class, $container);
+        
         $bootstrap = new MediaFolders\Core\Bootstrap($container);
         $bootstrap->init();
     } catch (Exception $e) {
