@@ -10,15 +10,22 @@ use MediaFolders\Core\Contracts\CacheInterface;
 use MediaFolders\Core\MediaHandler;
 use MediaFolders\Core\ImageIndexing\ImageIndexer;
 use MediaFolders\Core\ImageIndexing\IndexProgress;
+use MediaFolders\Core\Logging\ImageLogger;
 use MediaFolders\Database\Contracts\AttachmentRepositoryInterface;
-use MediaFolders\Http\RestRouter; // Add this
-use MediaFolders\Database\Contracts\FolderRepositoryInterface; // Add this
+use MediaFolders\Http\RestRouter;
+use MediaFolders\Database\Contracts\FolderRepositoryInterface;
 
 class MediaServiceProvider implements ServiceProviderInterface
 {
     public function register(Container $container): void
     {
-        // First, register the RestRouter
+        // Register ImageLogger first since ImageIndexer depends on it
+        $container->singleton(ImageLogger::class, function() {
+            error_log('MediaFolders: Registering ImageLogger in container');
+            return new ImageLogger();
+        });
+
+        // Register RestRouter
         $container->singleton(RestRouter::class, function($container) {
             error_log('MediaFolders: Registering RestRouter in container');
             return new RestRouter(
@@ -27,21 +34,25 @@ class MediaServiceProvider implements ServiceProviderInterface
             );
         });
 
-        // Your existing registrations...
+        // Register MediaHandler
         $container->singleton(MediaHandler::class, function($container) {
             return new MediaHandler(
                 $container->get(CacheInterface::class),
-                $container->get(AttachmentRepositoryInterface::class)
+                $container->get(AttachmentRepositoryInterface::class),
+		$container->get(ImageLogger::class)    // Added the logger dependency
             );
         });
 
+        // Register ImageIndexer with all three required dependencies
         $container->singleton(ImageIndexer::class, function($container) {
             return new ImageIndexer(
                 $container->get(CacheInterface::class),
-                $container->get(AttachmentRepositoryInterface::class)
+                $container->get(AttachmentRepositoryInterface::class),
+                $container->get(ImageLogger::class)    // Added the logger dependency
             );
         });
 
+        // Register IndexProgress
         $container->singleton(IndexProgress::class, function() {
             return new IndexProgress();
         });
@@ -62,16 +73,25 @@ class MediaServiceProvider implements ServiceProviderInterface
             }
         }, 10);
 
-        // Your existing boot code...
-        $indexer = $container->get(ImageIndexer::class);
-        $indexer->init();
-
-        add_action('add_attachment', function($attachmentId) use ($container) {
+        // Initialize the indexer
+        try {
             $indexer = $container->get(ImageIndexer::class);
-            wp_schedule_single_event(time(), 'media_folders_process_image_index');
+            $indexer->init();
+        } catch (\Exception $e) {
+            error_log('MediaFolders ERROR: Failed to initialize ImageIndexer - ' . $e->getMessage());
+        }
+
+        // Handle new attachments
+        add_action('add_attachment', function($attachmentId) use ($container) {
+            try {
+                $indexer = $container->get(ImageIndexer::class);
+                wp_schedule_single_event(time(), 'media_folders_process_image_index');
+            } catch (\Exception $e) {
+                error_log('MediaFolders ERROR: Failed to handle new attachment - ' . $e->getMessage());
+            }
         });
 
-        // Inside the boot method, modify the admin_notices action:
+        // Admin notices for indexing progress
         add_action('admin_notices', function() use ($container) {
             // Only show on media pages or our plugin page
             $screen = get_current_screen();
@@ -83,16 +103,20 @@ class MediaServiceProvider implements ServiceProviderInterface
                 return;
             }
 
-            $progress = $container->get(IndexProgress::class);
-            $percent = $progress->getPercentComplete();
+            try {
+                $progress = $container->get(IndexProgress::class);
+                $percent = $progress->getPercentComplete();
 
-            if ($percent < 100) {
-                $class = 'notice notice-info';
-                $message = sprintf(
-                    __('Media Folders: Indexing images (%s%% complete)', 'media-folders'),
-                    $percent
-                );
-                printf('<div class="%1$s"><p>%2$s</p></div>', esc_attr($class), esc_html($message));
+                if ($percent < 100) {
+                    $class = 'notice notice-info';
+                    $message = sprintf(
+                        __('Media Folders: Indexing images (%s%% complete)', 'media-folders'),
+                        $percent
+                    );
+                    printf('<div class="%1$s"><p>%2$s</p></div>', esc_attr($class), esc_html($message));
+                }
+            } catch (\Exception $e) {
+                error_log('MediaFolders ERROR: Failed to show indexing progress - ' . $e->getMessage());
             }
         });
     }

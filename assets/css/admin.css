@@ -1,94 +1,43 @@
-.media-folders-container {
-    display: flex;
-    margin: 20px 0;
-    gap: 20px;
-}
-
-.media-folders-sidebar {
-    flex: 0 0 250px;
-    background: #fff;
-    border: 1px solid #ccd0d4;
-    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
-}
-
-.media-folders-content {
-    flex: 1;
-    background: #fff;
-    border: 1px solid #ccd0d4;
-    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
-    padding: 20px;
-}
-
-.media-folders-tree {
-    padding: 10px;
-}
-
-.media-folders-tree-item {
-    display: flex;
-    align-items: center;
-    padding: 5px 0;
-    cursor: pointer;
-}
-
-.media-folders-tree-item:hover {
-    background: #f0f0f1;
-}
-
-.media-folders-tree-item.active {
-    background: #2271b1;
-    color: #fff;
-}
-
-.media-folders-tree-item-icon {
-    margin-right: 8px;
-}
-
-.media-folders-toolbar {
-    padding: 10px;
-    border-bottom: 1px solid #ccd0d4;
-    display: flex;
-    gap: 10px;
-}
-
-.media-folders-toolbar button {
-    margin: 0 !important;
-}
-
-.media-folders-empty {
+/* Welcome Screen */
+.welcome-screen {
+    max-width: 800px;
+    margin: 40px auto;
     text-align: center;
-    padding: 40px 20px;
-    color: #50575e;
 }
 
-.media-folders-grid {
+.welcome-content {
+    background: #fff;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.feature-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 20px;
-    padding: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 30px;
+    margin: 40px 0;
 }
 
-.media-folders-attachment {
-    position: relative;
-    cursor: pointer;
-}
-
-.media-folders-attachment img {
-    width: 100%;
-    height: auto;
-    display: block;
-}
-
-.media-folders-attachment-title {
-    font-size: 12px;
-    padding: 5px;
+.feature-item {
     text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
-.media-folders-loading {
+/* Setup Screen */
+.setup-screen {
+    max-width: 600px;
+    margin: 40px auto;
     text-align: center;
-    padding: 40px 20px;
-    color: #50575e;
+}
+
+.indexing-status {
+    margin-top: 30px;
+}
+
+.error-message {
+    color: #cc1818;
+    margin-top: 15px;
+    padding: 10px;
+    background: #ffeaea;
+    border-radius: 4px;
 }

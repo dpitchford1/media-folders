@@ -4,135 +4,218 @@ declare(strict_types=1);
 
 namespace MediaFolders\Tests\Unit\Core\ImageIndexing;
 
-use MediaFolders\Core\Contracts\CacheInterface;
 use MediaFolders\Core\ImageIndexing\ImageIndexer;
+use MediaFolders\Core\Contracts\CacheInterface;
+use MediaFolders\Core\Logging\ImageLogger;
 use MediaFolders\Database\Contracts\AttachmentRepositoryInterface;
 use PHPUnit\Framework\TestCase;
+use Mockery;
+use WP_Error;
 
 class ImageIndexerTest extends TestCase
 {
     private $cache;
     private $attachmentRepository;
+    private $logger;
     private $indexer;
+    private $wpdb;
 
     protected function setUp(): void
     {
         parent::setUp();
         
         // Create mocks
-        $this->cache = $this->createMock(CacheInterface::class);
-        $this->attachmentRepository = $this->createMock(AttachmentRepositoryInterface::class);
+        $this->cache = Mockery::mock(CacheInterface::class);
+        $this->attachmentRepository = Mockery::mock(AttachmentRepositoryInterface::class);
+        $this->logger = Mockery::mock(ImageLogger::class);
         
-        // Create indexer instance
+        // Mock WPDB
+        $this->wpdb = Mockery::mock();
+        $this->wpdb->posts = 'wp_posts';
+        $this->wpdb->prefix = 'wp_';
+        global $wpdb;
+        $wpdb = $this->wpdb;
+        
+        // Create indexer instance with mocks
         $this->indexer = new ImageIndexer(
             $this->cache,
-            $this->attachmentRepository
+            $this->attachmentRepository,
+            $this->logger
         );
     }
 
-    public function testInitRegistersWordPressCronHook(): void
+    protected function tearDown(): void
     {
-        // Setup expectations for WordPress functions
-        global $wp_actions;
-        $wp_actions = [];
+        Mockery::close();
+        parent::tearDown();
+    }
+
+    public function test_init_schedules_cron_when_not_scheduled()
+    {
+        // Mock WordPress functions
+        \Brain\Monkey\Functions\expect('wp_next_scheduled')
+            ->once()
+            ->with('media_folders_process_image_index')
+            ->andReturn(false);
+
+        \Brain\Monkey\Functions\expect('wp_schedule_event')
+            ->once()
+            ->with(Mockery::type('int'), 'every_5_minutes', 'media_folders_process_image_index');
+
+        \Brain\Monkey\Functions\expect('add_action')
+            ->once()
+            ->with('media_folders_process_image_index', Mockery::type('array'));
+
+        $this->logger->shouldReceive('logInfo')
+            ->once()
+            ->with('Scheduling initial indexing cron job');
 
         $this->indexer->init();
-        
-        $this->assertTrue(
-            has_action('media_folders_process_image_index') !== false,
-            'Cron hook should be registered'
-        );
     }
 
-    public function testProcessBatchHandlesEmptyImageList(): void
+    public function test_init_does_not_schedule_cron_when_already_scheduled()
     {
-        global $wpdb;
-        $wpdb = $this->createMock(wpdb::class);
-        
-        // Mock empty results
-        $wpdb->expects($this->once())
-            ->method('get_results')
-            ->willReturn([]);
+        // Mock WordPress functions
+        \Brain\Monkey\Functions\expect('wp_next_scheduled')
+            ->once()
+            ->with('media_folders_process_image_index')
+            ->andReturn(12345);
+
+        \Brain\Monkey\Functions\expect('wp_schedule_event')
+            ->never();
+
+        \Brain\Monkey\Functions\expect('add_action')
+            ->once()
+            ->with('media_folders_process_image_index', Mockery::type('array'));
+
+        $this->indexer->init();
+    }
+
+    public function test_process_batch_handles_empty_image_list()
+    {
+        // Mock database query
+        $this->wpdb->shouldReceive('prepare')
+            ->once()
+            ->andReturn('PREPARED_QUERY');
+
+        $this->wpdb->shouldReceive('get_results')
+            ->once()
+            ->with('PREPARED_QUERY')
+            ->andReturn([]);
+
+        // Expect logging
+        $this->logger->shouldReceive('logInfo')
+            ->once()
+            ->with('No unprocessed images found');
+
+        // Mock WordPress functions for cron check
+        \Brain\Monkey\Functions\expect('wp_next_scheduled')
+            ->once()
+            ->andReturn(12345);
+
+        \Brain\Monkey\Functions\expect('wp_unschedule_event')
+            ->once()
+            ->with(12345, 'media_folders_process_image_index');
 
         $this->indexer->processBatch();
-        
-        // Verify cache was not called
-        $this->cache->expects($this->never())
-            ->method('set');
     }
 
-    public function testProcessBatchProcessesImages(): void
+    public function test_process_batch_processes_images_successfully()
     {
-        global $wpdb;
-        $wpdb = $this->createMock(wpdb::class);
-        
-        // Mock image data
+        // Mock images data
         $images = [
             (object)[
                 'ID' => 1,
-                'post_title' => 'Test Image',
-                'guid' => 'http://example.com/test.jpg'
+                'post_title' => 'Test Image 1',
+                'guid' => 'http://example.com/test1.jpg'
+            ],
+            (object)[
+                'ID' => 2,
+                'post_title' => 'Test Image 2',
+                'guid' => 'http://example.com/test2.jpg'
             ]
         ];
-        
-        $wpdb->expects($this->once())
-            ->method('get_results')
-            ->willReturn($images);
 
-        // Expect cache to be called for each image
-        $this->cache->expects($this->once())
-            ->method('set')
-            ->with(
-                'media_image_1',
-                $this->callback(function($value) {
-                    return isset($value['id']) 
-                        && isset($value['title'])
-                        && isset($value['metadata']);
-                }),
-                3600
-            );
+        // Mock database query
+        $this->wpdb->shouldReceive('prepare')
+            ->once()
+            ->andReturn('PREPARED_QUERY');
+
+        $this->wpdb->shouldReceive('get_results')
+            ->once()
+            ->with('PREPARED_QUERY')
+            ->andReturn($images);
+
+        // Mock WordPress functions
+        \Brain\Monkey\Functions\expect('get_attached_file')
+            ->twice()
+            ->andReturn('/path/to/image.jpg');
+
+        \Brain\Monkey\Functions\expect('wp_generate_attachment_metadata')
+            ->twice()
+            ->andReturn(['width' => 800, 'height' => 600]);
+
+        \Brain\Monkey\Functions\expect('wp_update_attachment_metadata')
+            ->twice();
+
+        \Brain\Monkey\Functions\expect('get_option')
+            ->once()
+            ->with('media_folders_index_progress', Mockery::type('array'))
+            ->andReturn(['total' => 10, 'processed' => 5, 'last_run' => 0]);
+
+        \Brain\Monkey\Functions\expect('update_option')
+            ->once()
+            ->with('media_folders_index_progress', Mockery::type('array'));
+
+        // Mock cache
+        $this->cache->shouldReceive('set')
+            ->twice();
+
+        // Expect logging calls
+        $this->logger->shouldReceive('logInfo')
+            ->once()
+            ->with(Mockery::pattern('/Starting batch processing/'));
+
+        $this->logger->shouldReceive('logImageProcessing')
+            ->times(4); // Start and complete for each image
+
+        $this->logger->shouldReceive('logPerformance')
+            ->times(3); // Once for each image and once for the batch
+
+        $this->logger->shouldReceive('logInfo')
+            ->once()
+            ->with('Updated indexing progress', Mockery::type('array'));
 
         $this->indexer->processBatch();
     }
 
-    public function testProcessBatchUpdatesProgress(): void
+    public function test_process_image_handles_wp_error()
     {
-        global $wpdb;
-        $wpdb = $this->createMock(wpdb::class);
-        
-        // Mock single image
-        $wpdb->expects($this->once())
-            ->method('get_results')
-            ->willReturn([
-                (object)[
-                    'ID' => 1,
-                    'post_title' => 'Test Image'
-                ]
-            ]);
-
-        // Mock WordPress options
-        $progress = [
-            'total' => 10,
-            'processed' => 5,
-            'last_run' => time() - 300
+        $image = (object)[
+            'ID' => 1,
+            'post_title' => 'Test Image',
+            'guid' => 'http://example.com/test.jpg'
         ];
-        
-        \WP_Mock::userFunction('get_option', [
-            'args' => ['media_folders_index_progress', $this->anything()],
-            'return' => $progress
-        ]);
-        
-        \WP_Mock::userFunction('update_option', [
-            'times' => 1,
-            'args' => [
-                'media_folders_index_progress',
-                $this->callback(function($value) use ($progress) {
-                    return $value['processed'] === $progress['processed'] + 1
-                        && $value['last_run'] > $progress['last_run'];
-                })
-            ]
-        ]);
 
-        $this->indexer->processBatch();
+        // Mock WordPress functions
+        \Brain\Monkey\Functions\expect('get_attached_file')
+            ->once()
+            ->andReturn('/path/to/image.jpg');
+
+        \Brain\Monkey\Functions\expect('wp_generate_attachment_metadata')
+            ->once()
+            ->andReturn(new WP_Error('test_error', 'Test error message'));
+
+        // Expect logging calls
+        $this->logger->shouldReceive('logImageProcessing')
+            ->once()
+            ->with(1, 'started', Mockery::type('array'));
+
+        $this->logger->shouldReceive('logError')
+            ->once()
+            ->with('Failed to generate attachment metadata', Mockery::type('array'));
+
+        $result = $this->indexer->processImage($image);
+        $this->assertFalse($result);
     }
 }
