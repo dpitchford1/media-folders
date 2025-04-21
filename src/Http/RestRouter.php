@@ -42,96 +42,129 @@ class RestRouter implements RestRouterInterface
      */
     public function register(): void
     {
-        register_rest_route(
-            self::API_NAMESPACE,
-            '/folders',
-            [
-                [
-                    'methods' => 'GET',
-                    'callback' => [$this, 'getFolders'],
-                    'permission_callback' => [$this, 'checkPermission'],
-                ],
-                [
-                    'methods' => 'POST',
-                    'callback' => [$this, 'createFolder'],
-                    'permission_callback' => [$this, 'checkPermission'],
-                    'args' => [
-                        'name' => [
-                            'required' => true,
-                            'type' => 'string',
-                            'sanitize_callback' => 'sanitize_text_field',
-                        ],
-                        'parent_id' => [
-                            'required' => false,
-                            'type' => 'integer',
-                        ],
-                    ],
-                ],
-            ]
-        );
+        // debug added
+        error_log('MediaFolders: Starting REST route registration');
 
-        register_rest_route(
-            self::API_NAMESPACE,
-            '/folders/(?P<id>\d+)',
-            [
-                [
-                    'methods' => 'GET',
-                    'callback' => [$this, 'getFolder'],
-                    'permission_callback' => [$this, 'checkPermission'],
-                ],
-                [
-                    'methods' => 'PUT',
-                    'callback' => [$this, 'updateFolder'],
-                    'permission_callback' => [$this, 'checkPermission'],
-                    'args' => [
-                        'name' => [
-                            'required' => true,
-                            'type' => 'string',
-                            'sanitize_callback' => 'sanitize_text_field',
-                        ],
-                    ],
-                ],
-                [
-                    'methods' => 'DELETE',
-                    'callback' => [$this, 'deleteFolder'],
-                    'permission_callback' => [$this, 'checkPermission'],
-                ],
-            ]
-        );
+        if (!function_exists('register_rest_route')) {
+            error_log('MediaFolders ERROR: register_rest_route function not available');
+            return;
+        }
 
-        register_rest_route(
-            self::API_NAMESPACE,
-            '/folders/(?P<id>\d+)/attachments',
-            [
+        try {
+            // Add a simple test route first
+            register_rest_route(
+                self::API_NAMESPACE,
+                '/test',
                 [
                     'methods' => 'GET',
-                    'callback' => [$this, 'getFolderAttachments'],
-                    'permission_callback' => [$this, 'checkPermission'],
-                ],
+                    'callback' => function() {
+                        error_log('MediaFolders: Test route accessed');
+                        return new WP_REST_Response(['status' => 'ok'], 200);
+                    },
+                    'permission_callback' => function() {
+                        error_log('MediaFolders: Permission check for test route');
+                        return true;
+                    }
+                ]
+            );
+
+            error_log('MediaFolders: Test route registered successfully');
+            
+            register_rest_route(
+                self::API_NAMESPACE,
+                '/folders',
                 [
-                    'methods' => 'POST',
-                    'callback' => [$this, 'addAttachmentToFolder'],
-                    'permission_callback' => [$this, 'checkPermission'],
-                    'args' => [
-                        'attachment_id' => [
-                            'required' => true,
-                            'type' => 'integer',
+                    [
+                        'methods' => 'GET',
+                        'callback' => [$this, 'getFolders'],
+                        'permission_callback' => [$this, 'checkPermission'],
+                    ],
+                    [
+                        'methods' => 'POST',
+                        'callback' => [$this, 'createFolder'],
+                        'permission_callback' => [$this, 'checkPermission'],
+                        'args' => [
+                            'name' => [
+                                'required' => true,
+                                'type' => 'string',
+                                'sanitize_callback' => 'sanitize_text_field',
+                            ],
+                            'parent_id' => [
+                                'required' => false,
+                                'type' => 'integer',
+                            ],
                         ],
                     ],
-                ],
+                ]
+            );
+
+            register_rest_route(
+                self::API_NAMESPACE,
+                '/folders/(?P<id>\d+)',
                 [
-                    'methods' => 'DELETE',
-                    'callback' => [$this, 'removeAttachmentFromFolder'],
-                    'permission_callback' => [$this, 'checkPermission'],
-                    'args' => [
-                        'attachment_id' => [
-                            'required' => true,
-                            'type' => 'integer',
+                    [
+                        'methods' => 'GET',
+                        'callback' => [$this, 'getFolder'],
+                        'permission_callback' => [$this, 'checkPermission'],
+                    ],
+                    [
+                        'methods' => 'PUT',
+                        'callback' => [$this, 'updateFolder'],
+                        'permission_callback' => [$this, 'checkPermission'],
+                        'args' => [
+                            'name' => [
+                                'required' => true,
+                                'type' => 'string',
+                                'sanitize_callback' => 'sanitize_text_field',
+                            ],
                         ],
                     ],
-                ],
-            ]
-        );
+                    [
+                        'methods' => 'DELETE',
+                        'callback' => [$this, 'deleteFolder'],
+                        'permission_callback' => [$this, 'checkPermission'],
+                    ],
+                ]
+            );
+
+            register_rest_route(
+                self::API_NAMESPACE,
+                '/folders/(?P<id>\d+)/attachments',
+                [
+                    [
+                        'methods' => 'GET',
+                        'callback' => [$this, 'getFolderAttachments'],
+                        'permission_callback' => [$this, 'checkPermission'],
+                    ],
+                    [
+                        'methods' => 'POST',
+                        'callback' => [$this, 'addAttachmentToFolder'],
+                        'permission_callback' => [$this, 'checkPermission'],
+                        'args' => [
+                            'attachment_id' => [
+                                'required' => true,
+                                'type' => 'integer',
+                            ],
+                        ],
+                    ],
+                    [
+                        'methods' => 'DELETE',
+                        'callback' => [$this, 'removeAttachmentFromFolder'],
+                        'permission_callback' => [$this, 'checkPermission'],
+                        'args' => [
+                            'attachment_id' => [
+                                'required' => true,
+                                'type' => 'integer',
+                            ],
+                        ],
+                    ],
+                ]
+            );
+
+            error_log('MediaFolders: All routes registered successfully');
+        } catch (\Exception $e) {
+            error_log('MediaFolders ERROR: Failed to register routes - ' . $e->getMessage());
+        }
     }
 
     /**
@@ -305,7 +338,20 @@ class RestRouter implements RestRouterInterface
      * @return bool
      */
     public function checkPermission(): bool
-    {
-        return current_user_can('upload_files');
-    }
+{
+    $user_id = get_current_user_id();
+    $can_upload = current_user_can('upload_files');
+    $is_logged_in = is_user_logged_in();
+    $user = wp_get_current_user();
+    
+    error_log(sprintf(
+        'MediaFolders: Permission check - User ID: %d, Logged in: %s, Username: %s, Can Upload: %s',
+        $user_id,
+        $is_logged_in ? 'yes' : 'no',
+        $user->user_login,
+        $can_upload ? 'yes' : 'no'
+    ));
+    
+    return $can_upload;
+}
 }

@@ -12,5 +12,11 @@ module.exports = {
     output: {
         path: path.resolve(__dirname, 'build'),
         filename: '[name].js'
+    },
+    externals: {
+        '@wordpress/api-fetch': 'wp.apiFetch',
+        '@wordpress/element': 'wp.element',
+        '@wordpress/components': 'wp.components',
+        '@wordpress/i18n': 'wp.i18n'
     }
 };
