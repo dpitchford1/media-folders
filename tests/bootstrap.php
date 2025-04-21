@@ -29,3 +29,26 @@ tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
+
+// Add Mockery setup for WordPress functions
+require_once dirname( __DIR__ ) . '/vendor/autoload.php';
+\Brain\Monkey\setUp();
+
+// Add teardown for Mockery
+add_action('teardown', function() {
+    \Brain\Monkey\tearDown();
+    Mockery::close();
+});
+
+// WordPress function mocks for testing
+global $wp_mock_functions;
+$wp_mock_functions = [];
+
+if (!function_exists('wp_get_attachment_metadata')) {
+    function wp_get_attachment_metadata($attachment_id) {
+        global $wp_mock_functions;
+        return isset($wp_mock_functions['wp_get_attachment_metadata']) 
+            ? $wp_mock_functions['wp_get_attachment_metadata']($attachment_id)
+            : false;
+    }
+}
