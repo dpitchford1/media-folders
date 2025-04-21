@@ -1,14 +1,15 @@
 <?php
 
-namespace MediaFolders\Core\Providers;
+namespace MediaFolders\Providers;
 
+use Illuminate\Support\ServiceProvider;
 use MediaFolders\Core\Logging\ImageLogger;
 
-class LoggingServiceProvider
+class LoggingServiceProvider extends ServiceProvider
 {
-    public function register($container): void
+    public function register(): void
     {
-        $container->singleton(ImageLogger::class, function() {
+        $this->app->singleton(ImageLogger::class, function() {
             return new ImageLogger();
         });
     }

@@ -38,7 +38,8 @@ class MediaServiceProvider implements ServiceProviderInterface
         $container->singleton(MediaHandler::class, function($container) {
             return new MediaHandler(
                 $container->get(CacheInterface::class),
-                $container->get(AttachmentRepositoryInterface::class)
+                $container->get(AttachmentRepositoryInterface::class),
+		$container->get(ImageLogger::class)    // Added the logger dependency
             );
         });
 
