@@ -6,19 +6,23 @@ namespace MediaFolders\Core;
 
 use MediaFolders\Database\Contracts\AttachmentRepositoryInterface;
 use MediaFolders\Core\Contracts\CacheInterface;
+use MediaFolders\Core\Logging\ImageLogger;
 use MediaFolders\Models\Attachment;
 
 class MediaHandler
 {
     private CacheInterface $cache;
     private AttachmentRepositoryInterface $attachmentRepository;
+    private ImageLogger $logger;
     
     public function __construct(
         CacheInterface $cache,
-        AttachmentRepositoryInterface $attachmentRepository
+        AttachmentRepositoryInterface $attachmentRepository,
+        ImageLogger $logger
     ) {
         $this->cache = $cache;
         $this->attachmentRepository = $attachmentRepository;
+        $this->logger = $logger;
     }
     
     /**
@@ -32,6 +36,10 @@ class MediaHandler
         $cacheKey = 'media_items_' . md5(serialize($args));
         
         return $this->cache->remember($cacheKey, 3600, function() use ($args) {
+            $this->logger->logInfo('Fetching media items', [
+                'folder_id' => $args['folder_id'] ?? 0,
+                'args' => $args
+            ]);
             return $this->attachmentRepository->getByFolder($args['folder_id'] ?? 0, $args);
         });
     }
@@ -45,13 +53,25 @@ class MediaHandler
      */
     public function moveToFolder(array $attachmentIds, int $folderId): bool
     {
+        $this->logger->logInfo('Moving attachments to folder', [
+            'attachment_ids' => $attachmentIds,
+            'folder_id' => $folderId
+        ]);
+
         $success = true;
         foreach ($attachmentIds as $attachmentId) {
             try {
                 $this->attachmentRepository->addToFolder((int)$attachmentId, $folderId);
             } catch (\Exception $e) {
                 $success = false;
-                error_log("Failed to move attachment {$attachmentId} to folder {$folderId}: " . $e->getMessage());
+                $this->logger->logError(
+                    "Failed to move attachment to folder", 
+                    [
+                        'attachment_id' => $attachmentId,
+                        'folder_id' => $folderId,
+                        'error' => $e->getMessage()
+                    ]
+                );
             }
         }
         return $success;
@@ -66,13 +86,25 @@ class MediaHandler
      */
     public function removeFromFolder(array $attachmentIds, int $folderId): bool
     {
+        $this->logger->logInfo('Removing attachments from folder', [
+            'attachment_ids' => $attachmentIds,
+            'folder_id' => $folderId
+        ]);
+
         $success = true;
         foreach ($attachmentIds as $attachmentId) {
             try {
                 $this->attachmentRepository->removeFromFolder((int)$attachmentId, $folderId);
             } catch (\Exception $e) {
                 $success = false;
-                error_log("Failed to remove attachment {$attachmentId} from folder {$folderId}: " . $e->getMessage());
+                $this->logger->logError(
+                    "Failed to remove attachment from folder",
+                    [
+                        'attachment_id' => $attachmentId,
+                        'folder_id' => $folderId,
+                        'error' => $e->getMessage()
+                    ]
+                );
             }
         }
         return $success;

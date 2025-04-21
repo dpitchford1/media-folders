@@ -40,6 +40,17 @@ class ImageLogger
     }
 
     /**
+     * Log an informational message
+     * 
+     * @param string $message The message to log
+     * @param array $context Additional context
+     */
+    public function logInfo(string $message, array $context = []): void
+    {
+        $this->log(self::INFO, $message, $context);
+    }
+
+    /**
      * Log processing of an image
      * 
      * @param int $attachmentId WordPress attachment ID
