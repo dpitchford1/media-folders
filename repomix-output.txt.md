@@ -49,6 +49,10 @@ docs/
   architecture/
     docs_architecture_0000-adr-template.md
     docs_architecture_0001-modern-plugin-architecture.md
+  first-install-analysis/
+    feature-priority.md
+    first-install-analysis.md
+    user-flows.md
   rebuild/
     MEDIA-FOLDERS-REBUILD-PLAN.md
   DEVELOPMENT.md
@@ -131,7 +135,12 @@ Old Plugin/
   page-mlfp-download.php
 src/
   Admin/
+    templates/
+      index-screen.php
+      welcome-screen.php
     AdminPage.php
+    class-admin.php
+    class-system-requirements.php
   Core/
     Cache/
       DatabaseCache.php
@@ -142,6 +151,8 @@ src/
     ImageIndexing/
       ImageIndexer.php
       IndexProgress.php
+    Logging/
+      ImageLogger.php
     Bootstrap.php
     Container.php
     EventDispatcher.php
@@ -175,6 +186,7 @@ src/
     DatabaseServiceProvider.php
     EventServiceProvider.php
     HttpServiceProvider.php
+    LoggingServiceProvider.php
     MediaServiceProvider.php
   functions.php
 tests/
@@ -190,9 +202,12 @@ tests/
       Database/
         FolderTest.php
       PluginTest.php
+  Unit/
+    Core/
+      ImageIndexing/
+        ImageIndexerTest.php
   bootstrap.php
 build-plugin.sh
-media-folders.code-workspace
 media-folders.php
 package.json
 phpcs.xml.dist
@@ -208,18 +223,6 @@ TESTING.md
 ````json
 {
   "bundles": {}
-}
-````
-
-## File: media-folders.code-workspace
-````
-{
-	"folders": [
-		{
-			"path": "."
-		}
-    ],
-    "settings": {}
 }
 ````
 
@@ -512,6 +515,193 @@ class Bootstrap {
 ---
 
 This ADR establishes the foundation for the Media Folders plugin rebuild.
+````
+
+## File: docs/first-install-analysis/feature-priority.md
+````markdown
+# Feature
+# Feature Priority Documentation
+
+## Priority Levels
+- P0: Must have for initial release
+- P1: Should have for improved functionality
+- P2: Nice to have for complete solution
+
+## P0 - Core Features (Must Have)
+
+### 1. Welcome/First Run Experience
+- Clear explanation of plugin purpose
+- System compatibility check
+- Initial setup wizard
+- Progress indication
+- Next steps guidance
+
+### 2. Initial Setup Process
+- Automatic index triggering
+- Basic folder structure setup
+- Permission checks
+- System compatibility verification
+- Database table creation
+
+### 3. Core UI Components
+- Admin menu integration
+- Welcome screen
+- Index status screen
+- Progress indicators
+- Basic folder management
+- Error messaging system
+
+## P1 - Enhanced Features (Should Have)
+
+### 1. Settings Panel
+- Indexing preferences
+  * Batch size
+  * Processing intervals
+  * Error handling
+- Performance settings
+  * Cache duration
+  * Memory usage
+- Display options
+  * Folder view type
+  * Items per page
+  * Sort options
+
+### 2. Enhanced Folder Management
+- Drag and drop interface
+- Bulk operations
+- Search functionality
+- Filter options
+- Sort capabilities
+
+### 3. Performance Features
+- Caching system
+- Optimized queries
+- Background processing
+- Progress persistence
+
+## P2 - Advanced Features (Nice to Have)
+
+### 1. Advanced Functionality
+- Custom taxonomies
+- API endpoints
+- Import/Export system
+- Backup/Restore
+
+### 2. Integration Features
+- Third-party plugin compatibility
+- Theme integration options
+- REST API endpoints
+- CLI commands
+
+### 3. Additional Tools
+- Statistics dashboard
+- Usage reports
+- Optimization tools
+- Maintenance utilities
+````
+
+## File: docs/first-install-analysis/first-install-analysis.md
+````markdown
+# Initial Installation Analysis
+
+## When User First Installs Plugin
+
+### Initial UI Elements
+1. Primary Elements
+   - WordPress Admin Menu Item "Media Folders"
+   - Initial setup/welcome screen
+   - Status indicator for initial indexing progress
+   - Quick start guide/tutorial
+
+2. Navigation Structure
+   - Welcome Tab
+   - Index Images Tab
+   - Access to welcome screen via help menu
+
+3. Action Elements
+   - "Index Current Files" button (primary action)
+   - "Skip Indexing" button (secondary action)
+   - Progress indicators
+   - System compatibility status
+
+### Initial Available Functionality
+
+1. Background Tasks
+   - Automatic start of image indexing process (when initiated)
+   - Progress monitoring system
+   - Basic folder structure initialization
+   - WordPress cron job setup
+
+2. User Actions
+   - Ability to start/pause indexing
+   - Basic folder creation
+   - View indexing status
+   - Access to settings panel
+
+3. System Operations
+   - WordPress 6.5+ compatibility check
+   - Server requirements verification
+   - File permission checks
+   - Database table creation/verification
+
+### System Requirements
+1. WordPress Version
+   - Minimum: 6.5
+   - Recommended: Latest version
+
+2. PHP Requirements
+   - Memory limit: 64MB minimum
+   - Max execution time: 30 seconds minimum
+   - Required extensions: 
+     * gd or imagick
+     * mysqli
+     * json
+
+3. File System
+   - Write permissions on wp-content/uploads
+   - Ability to create/modify database tables
+````
+
+## File: docs/first-install-analysis/user-flows.md
+````markdown
+# User Flow Documentation
+
+## Installation Flow
+1. Plugin Installation
+   - Upload plugin
+   - Activate plugin
+   - Initial compatibility check
+
+2. First Run Experience
+   - Welcome screen appears
+   - System requirements verified
+   - Database tables created
+   - Initial options set
+
+3. User Decision Point
+   - Option A: Start Indexing
+     * Begin processing current media
+     * Show progress indicator
+     * Display initial folder structure
+   - Option B: Skip Indexing
+     * Access to manual index later
+     * Basic functionality available
+     * Warning indicator present
+
+## Primary User Flows
+
+### Flow 1: Initial Setup
+```mermaid
+flowchart TD
+    A[Install Plugin] --> B[Activation]
+    B --> C{System Check}
+    C -->|Pass| D[Show Welcome]
+    C -->|Fail| E[Show Requirements]
+    D --> F{User Choice}
+    F -->|Index| G[Start Process]
+    F -->|Skip| H[Basic Mode]
+    G --> I[Full Features]
+    H --> J[Limited Features]
 ````
 
 ## File: docs/rebuild/MEDIA-FOLDERS-REBUILD-PLAN.md
@@ -22742,6 +22932,154 @@ $sql = $wpdb->prepare($prepare_sql, $hash_id);
 $wpdb->update($table, $data, $where);
 ````
 
+## File: src/Admin/templates/index-screen.php
+````php
+/**
+ * Media Folders - Index Screen Template
+ *
+ * @package MediaFolders
+ * @since 1.0.0
+ */
+⋮----
+<?php if ($this->indexer->is_running()): ?>
+⋮----
+<div class="progress" style="width: <?php echo esc_attr($this->indexer->get_progress()); ?>%"></div>
+⋮----
+$this->indexer->get_processed_count(),
+$this->indexer->get_total_count()
+⋮----
+<?php if ($this->indexer->has_indexed_files()): ?>
+⋮----
+<?php $this->render_folder_tree(); ?>
+````
+
+## File: src/Admin/templates/welcome-screen.php
+````php
+/**
+ * Media Folders - Welcome Screen Template
+ *
+ * @package MediaFolders
+ * @since 1.0.0
+ */
+⋮----
+<?php if (!$this->system_check->is_compatible()): ?>
+⋮----
+<?php foreach ($this->system_check->get_issues() as $issue): ?>
+````
+
+## File: src/Admin/class-admin.php
+````php
+/**
+ * Media Folders Admin Class
+ *
+ * @package MediaFolders
+ * @since 1.0.0
+ */
+⋮----
+namespace MediaFolders\Admin;
+⋮----
+class Admin {
+/**
+     * Instance of the system requirements checker
+     *
+     * @var SystemRequirements
+     */
+private $system_check;
+⋮----
+/**
+     * Initialize the admin class
+     */
+public function __construct() {
+⋮----
+/**
+     * Add menu pages to WordPress admin
+     */
+public function add_menu_pages() {
+⋮----
+/**
+     * Enqueue admin scripts and styles
+     */
+public function enqueue_admin_assets() {
+⋮----
+/**
+     * Handle admin actions
+     */
+public function handle_actions() {
+⋮----
+$this->start_indexing();
+⋮----
+/**
+     * Render the main admin page
+     */
+public function render_main_page() {
+⋮----
+/**
+     * Start the indexing process
+     */
+private function start_indexing() {
+// Initialize indexing process
+⋮----
+$indexer->start();
+````
+
+## File: src/Admin/class-system-requirements.php
+````php
+/**
+ * System Requirements Check Class
+ *
+ * @package MediaFolders
+ * @since 1.0.0
+ */
+⋮----
+namespace MediaFolders\Admin;
+⋮----
+class SystemRequirements {
+/**
+     * Store any system requirement issues
+     *
+     * @var array
+     */
+private $issues = array();
+⋮----
+/**
+     * Check if the system meets all requirements
+     *
+     * @return bool
+     */
+public function is_compatible() {
+$this->check_wp_version();
+$this->check_php_version();
+$this->check_php_extensions();
+$this->check_file_permissions();
+⋮----
+/**
+     * Get list of identified issues
+     *
+     * @return array
+     */
+public function get_issues() {
+⋮----
+/**
+     * Check WordPress version
+     */
+private function check_wp_version() {
+⋮----
+/**
+     * Check PHP version
+     */
+private function check_php_version() {
+⋮----
+/**
+     * Check required PHP extensions
+     */
+private function check_php_extensions() {
+⋮----
+/**
+     * Check file permissions
+     */
+private function check_file_permissions() {
+````
+
 ## File: src/Core/Cache/DatabaseCache.php
 ````php
 namespace MediaFolders\Core\Cache;
@@ -22891,79 +23229,6 @@ public function register(Container $container): void;
 public function boot(Container $container): void;
 ````
 
-## File: src/Core/ImageIndexing/ImageIndexer.php
-````php
-namespace MediaFolders\Core\ImageIndexing;
-⋮----
-use MediaFolders\Core\Contracts\CacheInterface;
-use MediaFolders\Database\Contracts\AttachmentRepositoryInterface;
-⋮----
-class ImageIndexer
-⋮----
-private CacheInterface $cache;
-private AttachmentRepositoryInterface $attachmentRepository;
-⋮----
-public function __construct(
-⋮----
-/**
-     * Initialize the indexer.
-     */
-public function init(): void
-⋮----
-// Register cron event
-⋮----
-// Schedule initial indexing if needed
-⋮----
-/**
-     * Process a batch of images.
-     */
-public function processBatch(): void
-⋮----
-// Get unprocessed images
-$images = $this->getUnprocessedImages();
-⋮----
-$this->maybeDisableCron();
-⋮----
-$this->processImage($image);
-⋮----
-// Update progress
-$this->updateProgress(count($images));
-⋮----
-/**
-     * Get unprocessed images.
-     *
-     * @return array
-     */
-private function getUnprocessedImages(): array
-⋮----
-return $wpdb->get_results($wpdb->prepare("
-⋮----
-/**
-     * Process a single image.
-     *
-     * @param object $image
-     */
-private function processImage(object $image): void
-⋮----
-// Generate image metadata
-⋮----
-// Store in cache for quick access
-⋮----
-$this->cache->set($cacheKey, [
-⋮----
-/**
-     * Update indexing progress.
-     *
-     * @param int $processedCount
-     */
-private function updateProgress(int $processedCount): void
-⋮----
-/**
-     * Disable cron if indexing is complete.
-     */
-private function maybeDisableCron(): void
-````
-
 ## File: src/Core/ImageIndexing/IndexProgress.php
 ````php
 namespace MediaFolders\Core\ImageIndexing;
@@ -23019,59 +23284,6 @@ public function dispatch(object $event): void
 $listener($event);
 ⋮----
 public function addListener(string $event, callable $listener): void
-````
-
-## File: src/Core/MediaHandler.php
-````php
-namespace MediaFolders\Core;
-⋮----
-use MediaFolders\Database\Contracts\AttachmentRepositoryInterface;
-use MediaFolders\Core\Contracts\CacheInterface;
-use MediaFolders\Models\Attachment;
-⋮----
-class MediaHandler
-⋮----
-private CacheInterface $cache;
-private AttachmentRepositoryInterface $attachmentRepository;
-⋮----
-public function __construct(
-⋮----
-/**
-     * Get media items with caching.
-     *
-     * @param array $args Query arguments
-     * @return array<Attachment>
-     */
-public function getMediaItems(array $args): array
-⋮----
-return $this->cache->remember($cacheKey, 3600, function() use ($args) {
-return $this->attachmentRepository->getByFolder($args['folder_id'] ?? 0, $args);
-⋮----
-/**
-     * Move media items to a folder.
-     *
-     * @param array $attachmentIds
-     * @param int $folderId
-     * @return bool
-     */
-public function moveToFolder(array $attachmentIds, int $folderId): bool
-⋮----
-$this->attachmentRepository->addToFolder((int)$attachmentId, $folderId);
-⋮----
-error_log("Failed to move attachment {$attachmentId} to folder {$folderId}: " . $e->getMessage());
-⋮----
-/**
-     * Remove media items from a folder.
-     *
-     * @param array $attachmentIds
-     * @param int $folderId
-     * @return bool
-     */
-public function removeFromFolder(array $attachmentIds, int $folderId): bool
-⋮----
-$this->attachmentRepository->removeFromFolder((int)$attachmentId, $folderId);
-⋮----
-error_log("Failed to remove attachment {$attachmentId} from folder {$folderId}: " . $e->getMessage());
 ````
 
 ## File: src/Database/Contracts/AttachmentRepositoryInterface.php
@@ -23646,142 +23858,6 @@ interface RestRouterInterface
 public function register(): void;
 ````
 
-## File: src/Http/RestRouter.php
-````php
-namespace MediaFolders\Http;
-⋮----
-use MediaFolders\Database\Contracts\FolderRepositoryInterface;
-use MediaFolders\Database\Contracts\AttachmentRepositoryInterface;
-use MediaFolders\Http\Contracts\RestRouterInterface;
-use WP_REST_Request;
-use WP_REST_Response;
-use WP_Error;
-⋮----
-class RestRouter implements RestRouterInterface
-⋮----
-/**
-     * @var FolderRepositoryInterface
-     */
-private FolderRepositoryInterface $folders;
-⋮----
-/**
-     * @var AttachmentRepositoryInterface
-     */
-private AttachmentRepositoryInterface $attachments;
-⋮----
-/**
-     * @param FolderRepositoryInterface $folders
-     * @param AttachmentRepositoryInterface $attachments
-     */
-public function __construct(
-⋮----
-/**
-     * {@inheritDoc}
-     */
-public function register(): void
-⋮----
-/**
-     * Get all folders.
-     *
-     * @param WP_REST_Request $request
-     * @return WP_REST_Response|WP_Error
-     */
-public function getFolders(WP_REST_Request $request)
-⋮----
-$folders = $this->folders->all();
-⋮----
-return new WP_Error('folder_error', $e->getMessage(), ['status' => 500]);
-⋮----
-/**
-     * Get a specific folder.
-     *
-     * @param WP_REST_Request $request
-     * @return WP_REST_Response|WP_Error
-     */
-public function getFolder(WP_REST_Request $request)
-⋮----
-$folder = $this->folders->find((int) $request['id']);
-⋮----
-/**
-     * Create a new folder.
-     *
-     * @param WP_REST_Request $request
-     * @return WP_REST_Response|WP_Error
-     */
-public function createFolder(WP_REST_Request $request)
-⋮----
-$folder = $this->folders->create([
-⋮----
-return new WP_Error('folder_creation_error', $e->getMessage(), ['status' => 500]);
-⋮----
-/**
-     * Update a folder.
-     *
-     * @param WP_REST_Request $request
-     * @return WP_REST_Response|WP_Error
-     */
-public function updateFolder(WP_REST_Request $request)
-⋮----
-$updated = $this->folders->update((int) $request['id'], [
-⋮----
-return new WP_Error('folder_update_error', $e->getMessage(), ['status' => 500]);
-⋮----
-/**
-     * Delete a folder.
-     *
-     * @param WP_REST_Request $request
-     * @return WP_REST_Response|WP_Error
-     */
-public function deleteFolder(WP_REST_Request $request)
-⋮----
-$deleted = $this->folders->delete((int) $request['id']);
-⋮----
-return new WP_Error('folder_deletion_error', $e->getMessage(), ['status' => 500]);
-⋮----
-/**
-     * Get folder attachments.
-     *
-     * @param WP_REST_Request $request
-     * @return WP_REST_Response|WP_Error
-     */
-public function getFolderAttachments(WP_REST_Request $request)
-⋮----
-$attachments = $this->attachments->getByFolder((int) $request['id']);
-⋮----
-return new WP_Error('attachment_error', $e->getMessage(), ['status' => 500]);
-⋮----
-/**
-     * Add attachment to folder.
-     *
-     * @param WP_REST_Request $request
-     * @return WP_REST_Response|WP_Error
-     */
-public function addAttachmentToFolder(WP_REST_Request $request)
-⋮----
-$success = $this->attachments->addToFolder(
-⋮----
-return new WP_Error('attachment_add_error', $e->getMessage(), ['status' => 500]);
-⋮----
-/**
-     * Remove attachment from folder.
-     *
-     * @param WP_REST_Request $request
-     * @return WP_REST_Response|WP_Error
-     */
-public function removeAttachmentFromFolder(WP_REST_Request $request)
-⋮----
-$success = $this->attachments->removeFromFolder(
-⋮----
-return new WP_Error('attachment_remove_error', $e->getMessage(), ['status' => 500]);
-⋮----
-/**
-     * Check if user has permission to manage folders.
-     *
-     * @return bool
-     */
-public function checkPermission(): bool
-````
-
 ## File: src/Models/Attachment.php
 ````php
 namespace MediaFolders\Models;
@@ -24026,58 +24102,6 @@ $router = $container->get(RestRouterInterface::class);
 $router->register();
 ````
 
-## File: src/Providers/MediaServiceProvider.php
-````php
-namespace MediaFolders\Providers;
-⋮----
-use MediaFolders\Core\Container;
-use MediaFolders\Core\Contracts\ServiceProviderInterface;
-use MediaFolders\Core\Contracts\CacheInterface;
-use MediaFolders\Core\MediaHandler;
-use MediaFolders\Core\ImageIndexing\ImageIndexer;
-use MediaFolders\Core\ImageIndexing\IndexProgress;
-use MediaFolders\Database\Contracts\AttachmentRepositoryInterface;
-⋮----
-/**
- * Media Service Provider
- * 
- * @package MediaFolders\Providers
- * @author dpitchford1
- * @since 2.0.0
- * @created 2025-04-19 20:41:42
- */
-class MediaServiceProvider implements ServiceProviderInterface
-⋮----
-/**
-     * {@inheritDoc}
-     */
-public function register(Container $container): void
-⋮----
-// Register core media services
-$container->singleton(MediaHandler::class, function($container) {
-⋮----
-$container->get(CacheInterface::class),
-$container->get(AttachmentRepositoryInterface::class)
-⋮----
-// Register image indexing services
-$container->singleton(ImageIndexer::class, function($container) {
-⋮----
-$container->singleton(IndexProgress::class, function() {
-⋮----
-public function boot(Container $container): void
-⋮----
-// Initialize image indexer
-$indexer = $container->get(ImageIndexer::class);
-$indexer->init();
-⋮----
-// Register hooks for media operations
-⋮----
-// Add admin notice for indexing progress
-⋮----
-$progress = $container->get(IndexProgress::class);
-$percent = $progress->getPercentComplete();
-````
-
 ## File: src/functions.php
 ````php
 // Global functions for Media Folders plugin
@@ -24163,83 +24187,6 @@ public function testRememberStoresAndReturnsCallbackValue(): void
 $result = $this->cache->remember($key, $ttl, function() use ($value) {
 ⋮----
 $this->assertEquals($value, $result);
-````
-
-## File: tests/php/Unit/Core/ImageIndexing/ImageIndexerTest.php
-````php
-namespace MediaFolders\Tests\Unit\Core\ImageIndexing;
-⋮----
-use MediaFolders\Core\Contracts\CacheInterface;
-use MediaFolders\Core\ImageIndexing\ImageIndexer;
-use MediaFolders\Database\Contracts\AttachmentRepositoryInterface;
-use PHPUnit\Framework\TestCase;
-⋮----
-class ImageIndexerTest extends TestCase
-⋮----
-private $cache;
-private $attachmentRepository;
-private $indexer;
-⋮----
-protected function setUp(): void
-⋮----
-parent::setUp();
-⋮----
-// Create mocks
-$this->cache = $this->createMock(CacheInterface::class);
-$this->attachmentRepository = $this->createMock(AttachmentRepositoryInterface::class);
-⋮----
-// Create indexer instance
-⋮----
-public function testInitRegistersWordPressCronHook(): void
-⋮----
-// Setup expectations for WordPress functions
-⋮----
-$this->indexer->init();
-⋮----
-$this->assertTrue(
-⋮----
-public function testProcessBatchHandlesEmptyImageList(): void
-⋮----
-$wpdb = $this->createMock(wpdb::class);
-⋮----
-// Mock empty results
-$wpdb->expects($this->once())
-->method('get_results')
-->willReturn([]);
-⋮----
-$this->indexer->processBatch();
-⋮----
-// Verify cache was not called
-$this->cache->expects($this->never())
-->method('set');
-⋮----
-public function testProcessBatchProcessesImages(): void
-⋮----
-// Mock image data
-⋮----
-->willReturn($images);
-⋮----
-// Expect cache to be called for each image
-$this->cache->expects($this->once())
-->method('set')
-->with(
-⋮----
-$this->callback(function($value) {
-⋮----
-public function testProcessBatchUpdatesProgress(): void
-⋮----
-// Mock single image
-⋮----
-->willReturn([
-⋮----
-// Mock WordPress options
-⋮----
-\WP_Mock::userFunction('get_option', [
-'args' => ['media_folders_index_progress', $this->anything()],
-⋮----
-\WP_Mock::userFunction('update_option', [
-⋮----
-$this->callback(function($value) use ($progress) {
 ````
 
 ## File: tests/php/Unit/Core/ImageIndexing/IndexProgressTest.php
@@ -24449,22 +24396,100 @@ $wpdb->expects($this->atLeastOnce())
 $this->plugin->deactivate();
 ````
 
-## File: tests/bootstrap.php
+## File: tests/Unit/Core/ImageIndexing/ImageIndexerTest.php
 ````php
-/**
- * PHPUnit bootstrap file
- *
- * @package MediaFolders
- */
+namespace MediaFolders\Tests\Unit\Core\ImageIndexing;
 ⋮----
-// Give access to tests_add_filter() function.
+use MediaFolders\Core\ImageIndexing\ImageIndexer;
+use MediaFolders\Core\ImageIndexing\IndexProgress;
+use MediaFolders\Core\Logging\ImageLogger;
+use PHPUnit\Framework\TestCase;
+use Mockery;
 ⋮----
-/**
- * Manually load the plugin being tested.
- */
-function _manually_load_plugin() {
+class ImageIndexerTest extends TestCase
 ⋮----
-// Start up the WP testing environment.
+private $logger;
+private $progress;
+private $indexer;
+⋮----
+protected function setUp(): void
+⋮----
+parent::setUp();
+⋮----
+// Create mocks
+$this->logger = Mockery::mock(ImageLogger::class);
+$this->progress = Mockery::mock(IndexProgress::class);
+⋮----
+// Create indexer instance with mocks
+⋮----
+protected function tearDown(): void
+⋮----
+Mockery::close();
+parent::tearDown();
+⋮----
+public function test_process_image_logs_start_and_completion()
+⋮----
+// Mock progress percentage
+$this->progress->shouldReceive('getPercentComplete')
+->twice()
+->andReturn(45.5);
+⋮----
+// Expect logging calls
+$this->logger->shouldReceive('logImageProcessing')
+->once()
+->with(123, 'started', Mockery::subset(['total_progress' => 45.5]));
+⋮----
+$this->logger->shouldReceive('logPerformance')
+⋮----
+->with('image_processing', Mockery::type('float'), Mockery::type('array'));
+⋮----
+->with(123, 'completed', Mockery::type('array'));
+⋮----
+// Mock WordPress function
+⋮----
+$result = $this->indexer->processImage(123);
+$this->assertTrue($result);
+⋮----
+public function test_process_image_handles_missing_metadata()
+⋮----
+->with(123, 'started', Mockery::type('array'));
+⋮----
+$this->logger->shouldReceive('logError')
+⋮----
+->with('Failed to get attachment metadata', ['attachment_id' => 123]);
+⋮----
+// Mock WordPress function to return false
+⋮----
+$this->assertFalse($result);
+⋮----
+public function test_process_batch_logs_performance()
+⋮----
+->times(5)
+->andReturn(50.0);
+⋮----
+// Expect individual image processing logs
+⋮----
+->times(10); // 2 times per image (start and completion)
+⋮----
+->times(5) // Once per image
+⋮----
+// Expect batch performance log
+⋮----
+->with('batch_processing', Mockery::type('float'), Mockery::subset([
+⋮----
+$processed = $this->indexer->processBatch($batchSize);
+$this->assertEquals($batchSize, $processed);
+⋮----
+public function test_process_batch_handles_errors()
+⋮----
+->times(3)
+->andReturn(60.0);
+⋮----
+// Expect error logging
+⋮----
+->times(6); // 2 times per image
+⋮----
+->times(3) // Once per image
 ````
 
 ## File: build-plugin.sh
@@ -25400,82 +25425,257 @@ Because most images and files in the media library have corresponding links embe
 3. Verify background indexing impact
 ````
 
-## File: src/Admin/AdminPage.php
+## File: src/Core/ImageIndexing/ImageIndexer.php
 ````php
-namespace MediaFolders\Admin;
+namespace MediaFolders\Core\ImageIndexing;
 ⋮----
-use MediaFolders\Database\Contracts\FolderRepositoryInterface;
+use MediaFolders\Core\Contracts\CacheInterface;
+use MediaFolders\Core\Logging\ImageLogger;
+use MediaFolders\Database\Contracts\AttachmentRepositoryInterface;
 ⋮----
-class AdminPage
+class ImageIndexer
 ⋮----
-/**
-     * @var string
-     */
+private CacheInterface $cache;
+private AttachmentRepositoryInterface $attachmentRepository;
+private ImageLogger $logger;
 ⋮----
-/**
-     * @var FolderRepositoryInterface
-     */
-private FolderRepositoryInterface $folders;
-⋮----
-/**
-     * @param FolderRepositoryInterface $folders
-     */
-public function __construct(FolderRepositoryInterface $folders)
+public function __construct(
 ⋮----
 /**
-     * Initialize admin page.
-     *
-     * @return void
+     * Initialize the indexer.
      */
 public function init(): void
 ⋮----
+// Register cron event
+⋮----
+// Schedule initial indexing if needed
+⋮----
+$this->logger->logInfo('Scheduling initial indexing cron job');
+⋮----
 /**
-     * Register the menu page.
-     *
-     * @return void
+     * Process a batch of images.
      */
-public function registerMenuPage(): void
+public function processBatch(): void
+⋮----
+// Get unprocessed images
+$images = $this->getUnprocessedImages();
+⋮----
+$this->logger->logInfo('No unprocessed images found');
+$this->maybeDisableCron();
+⋮----
+$this->logger->logInfo(
+⋮----
+if ($this->processImage($image)) {
+⋮----
+// Update progress
+$this->updateProgress($processed);
+⋮----
+// Log batch performance
+⋮----
+$this->logger->logPerformance(
 ⋮----
 /**
-     * Enqueue admin assets.
+     * Get unprocessed images.
      *
-     * @param string $hook
-     * @return void
+     * @return array
      */
-public function enqueueAssets(string $hook): void
+private function getUnprocessedImages(): array
 ⋮----
-if (!$this->isMediaFoldersPage($hook)) {
-⋮----
-$this->getAssetUrl('css/admin.css'),
-⋮----
-$this->getAssetUrl('js/admin.js'),
+return $wpdb->get_results($wpdb->prepare("
 ⋮----
 /**
-     * Render the admin page.
+     * Process a single image.
      *
-     * @return void
-     */
-public function renderPage(): void
-⋮----
-/**
-     * Check if current page is media folders page.
-     *
-     * @param string $hook
+     * @param object $image
      * @return bool
      */
-private function isMediaFoldersPage(string $hook): bool
+private function processImage(object $image): bool
+⋮----
+$this->logger->logImageProcessing(
+⋮----
+// Generate image metadata
+⋮----
+$this->logger->logError(
+⋮----
+'error' => $metadata->get_error_message()
+⋮----
+// Store in cache for quick access
+⋮----
+$this->cache->set($cacheKey, [
+⋮----
+'Image processing failed: ' . $e->getMessage(),
+⋮----
+'file' => $e->getFile(),
+'line' => $e->getLine()
 ⋮----
 /**
-     * Get asset URL.
+     * Update indexing progress.
      *
-     * @param string $path
+     * @param int $processedCount
+     */
+private function updateProgress(int $processedCount): void
+⋮----
+/**
+     * Disable cron if indexing is complete.
+     */
+private function maybeDisableCron(): void
+⋮----
+$this->logger->logInfo('Disabling indexing cron job - no more images to process');
+````
+
+## File: src/Core/Logging/ImageLogger.php
+````php
+namespace MediaFolders\Core\Logging;
+⋮----
+/**
+ * Handles logging for the image indexing system
+ */
+class ImageLogger
+⋮----
+/**
+     * Log levels following PSR-3 standards
+     */
+⋮----
+/**
+     * @var string Log file path
+     */
+private $logFile;
+⋮----
+/**
+     * @var bool Whether debug mode is enabled
+     */
+private $debug;
+⋮----
+/**
+     * Constructor
+     */
+public function __construct()
+⋮----
+$this->ensureLogDirectoryExists();
+⋮----
+/**
+     * Log an informational message
+     * 
+     * @param string $message The message to log
+     * @param array $context Additional context
+     */
+public function logInfo(string $message, array $context = []): void
+⋮----
+$this->log(self::INFO, $message, $context);
+⋮----
+/**
+     * Log processing of an image
+     * 
+     * @param int $attachmentId WordPress attachment ID
+     * @param string $status Processing status
+     * @param array $metadata Additional metadata
+     */
+public function logImageProcessing(int $attachmentId, string $status, array $metadata = []): void
+⋮----
+$this->log(
+⋮----
+/**
+     * Log a performance metric
+     * 
+     * @param string $operation Operation being measured
+     * @param float $duration Duration in seconds
+     * @param array $context Additional context
+     */
+public function logPerformance(string $operation, float $duration, array $context = []): void
+⋮----
+/**
+     * Log an error
+     * 
+     * @param string $message Error message
+     * @param array $context Error context
+     */
+public function logError(string $message, array $context = []): void
+⋮----
+$this->log(self::ERROR, $message, $context);
+⋮----
+/**
+     * Main logging method
+     * 
+     * @param string $level Log level
+     * @param string $message Log message
+     * @param array $context Additional context
+     */
+private function log(string $level, string $message, array $context = []): void
+⋮----
+/**
+     * Ensure the log directory exists and is writable
+     */
+private function ensureLogDirectoryExists(): void
+⋮----
+// Add .htaccess to protect logs
+⋮----
+/**
+     * Get the current log file path
+     * 
      * @return string
      */
-private function getAssetUrl(string $path): string
+public function getLogFile(): string
+````
+
+## File: src/Core/MediaHandler.php
+````php
+namespace MediaFolders\Core;
 ⋮----
-// For JS files, always look in build directory
+use MediaFolders\Database\Contracts\AttachmentRepositoryInterface;
+use MediaFolders\Core\Contracts\CacheInterface;
+use MediaFolders\Core\Logging\ImageLogger;
+use MediaFolders\Models\Attachment;
 ⋮----
-// For CSS files, check if built version exists, otherwise use assets
+class MediaHandler
+⋮----
+private CacheInterface $cache;
+private AttachmentRepositoryInterface $attachmentRepository;
+private ImageLogger $logger;
+⋮----
+public function __construct(
+⋮----
+/**
+     * Get media items with caching.
+     *
+     * @param array $args Query arguments
+     * @return array<Attachment>
+     */
+public function getMediaItems(array $args): array
+⋮----
+return $this->cache->remember($cacheKey, 3600, function() use ($args) {
+$this->logger->logInfo('Fetching media items', [
+⋮----
+return $this->attachmentRepository->getByFolder($args['folder_id'] ?? 0, $args);
+⋮----
+/**
+     * Move media items to a folder.
+     *
+     * @param array $attachmentIds
+     * @param int $folderId
+     * @return bool
+     */
+public function moveToFolder(array $attachmentIds, int $folderId): bool
+⋮----
+$this->logger->logInfo('Moving attachments to folder', [
+⋮----
+$this->attachmentRepository->addToFolder((int)$attachmentId, $folderId);
+⋮----
+$this->logger->logError(
+⋮----
+'error' => $e->getMessage()
+⋮----
+/**
+     * Remove media items from a folder.
+     *
+     * @param array $attachmentIds
+     * @param int $folderId
+     * @return bool
+     */
+public function removeFromFolder(array $attachmentIds, int $folderId): bool
+⋮----
+$this->logger->logInfo('Removing attachments from folder', [
+⋮----
+$this->attachmentRepository->removeFromFolder((int)$attachmentId, $folderId);
 ````
 
 ## File: src/Core/Plugin.php
@@ -25567,6 +25767,339 @@ $this->container->get(DatabaseManager::class)->installTables();
 public function deactivate(): void
 ⋮----
 // Clear scheduled events
+````
+
+## File: src/Http/RestRouter.php
+````php
+namespace MediaFolders\Http;
+⋮----
+use MediaFolders\Database\Contracts\FolderRepositoryInterface;
+use MediaFolders\Database\Contracts\AttachmentRepositoryInterface;
+use MediaFolders\Http\Contracts\RestRouterInterface;
+use WP_REST_Request;
+use WP_REST_Response;
+use WP_Error;
+⋮----
+class RestRouter implements RestRouterInterface
+⋮----
+/**
+     * @var FolderRepositoryInterface
+     */
+private FolderRepositoryInterface $folders;
+⋮----
+/**
+     * @var AttachmentRepositoryInterface
+     */
+private AttachmentRepositoryInterface $attachments;
+⋮----
+/**
+     * @param FolderRepositoryInterface $folders
+     * @param AttachmentRepositoryInterface $attachments
+     */
+public function __construct(
+⋮----
+/**
+     * {@inheritDoc}
+     */
+public function register(): void
+⋮----
+// debug added
+⋮----
+// Add a simple test route first
+⋮----
+error_log('MediaFolders ERROR: Failed to register routes - ' . $e->getMessage());
+⋮----
+/**
+     * Get all folders.
+     *
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+public function getFolders(WP_REST_Request $request)
+⋮----
+$folders = $this->folders->all();
+⋮----
+return new WP_Error('folder_error', $e->getMessage(), ['status' => 500]);
+⋮----
+/**
+     * Get a specific folder.
+     *
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+public function getFolder(WP_REST_Request $request)
+⋮----
+$folder = $this->folders->find((int) $request['id']);
+⋮----
+/**
+     * Create a new folder.
+     *
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+public function createFolder(WP_REST_Request $request)
+⋮----
+$folder = $this->folders->create([
+⋮----
+return new WP_Error('folder_creation_error', $e->getMessage(), ['status' => 500]);
+⋮----
+/**
+     * Update a folder.
+     *
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+public function updateFolder(WP_REST_Request $request)
+⋮----
+$updated = $this->folders->update((int) $request['id'], [
+⋮----
+return new WP_Error('folder_update_error', $e->getMessage(), ['status' => 500]);
+⋮----
+/**
+     * Delete a folder.
+     *
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+public function deleteFolder(WP_REST_Request $request)
+⋮----
+$deleted = $this->folders->delete((int) $request['id']);
+⋮----
+return new WP_Error('folder_deletion_error', $e->getMessage(), ['status' => 500]);
+⋮----
+/**
+     * Get folder attachments.
+     *
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+public function getFolderAttachments(WP_REST_Request $request)
+⋮----
+$attachments = $this->attachments->getByFolder((int) $request['id']);
+⋮----
+return new WP_Error('attachment_error', $e->getMessage(), ['status' => 500]);
+⋮----
+/**
+     * Add attachment to folder.
+     *
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+public function addAttachmentToFolder(WP_REST_Request $request)
+⋮----
+$success = $this->attachments->addToFolder(
+⋮----
+return new WP_Error('attachment_add_error', $e->getMessage(), ['status' => 500]);
+⋮----
+/**
+     * Remove attachment from folder.
+     *
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+public function removeAttachmentFromFolder(WP_REST_Request $request)
+⋮----
+$success = $this->attachments->removeFromFolder(
+⋮----
+return new WP_Error('attachment_remove_error', $e->getMessage(), ['status' => 500]);
+⋮----
+/**
+     * Check if user has permission to manage folders.
+     *
+     * @return bool
+     */
+public function checkPermission(): bool
+````
+
+## File: src/Providers/LoggingServiceProvider.php
+````php
+namespace MediaFolders\Providers;
+⋮----
+use Illuminate\Support\ServiceProvider;
+use MediaFolders\Core\Logging\ImageLogger;
+⋮----
+class LoggingServiceProvider extends ServiceProvider
+⋮----
+public function register(): void
+⋮----
+$this->app->singleton(ImageLogger::class, function() {
+````
+
+## File: tests/php/Unit/Core/ImageIndexing/ImageIndexerTest.php
+````php
+namespace MediaFolders\Tests\Unit\Core\ImageIndexing;
+⋮----
+use MediaFolders\Core\ImageIndexing\ImageIndexer;
+use MediaFolders\Core\Contracts\CacheInterface;
+use MediaFolders\Core\Logging\ImageLogger;
+use MediaFolders\Database\Contracts\AttachmentRepositoryInterface;
+use PHPUnit\Framework\TestCase;
+use Mockery;
+use WP_Error;
+⋮----
+class ImageIndexerTest extends TestCase
+⋮----
+private $cache;
+private $attachmentRepository;
+private $logger;
+private $indexer;
+private $wpdb;
+⋮----
+protected function setUp(): void
+⋮----
+parent::setUp();
+⋮----
+// Create mocks
+$this->cache = Mockery::mock(CacheInterface::class);
+$this->attachmentRepository = Mockery::mock(AttachmentRepositoryInterface::class);
+$this->logger = Mockery::mock(ImageLogger::class);
+⋮----
+// Mock WPDB
+$this->wpdb = Mockery::mock();
+⋮----
+// Create indexer instance with mocks
+⋮----
+protected function tearDown(): void
+⋮----
+Mockery::close();
+parent::tearDown();
+⋮----
+public function test_init_schedules_cron_when_not_scheduled()
+⋮----
+// Mock WordPress functions
+\Brain\Monkey\Functions\expect('wp_next_scheduled')
+->once()
+->with('media_folders_process_image_index')
+->andReturn(false);
+⋮----
+\Brain\Monkey\Functions\expect('wp_schedule_event')
+⋮----
+->with(Mockery::type('int'), 'every_5_minutes', 'media_folders_process_image_index');
+⋮----
+\Brain\Monkey\Functions\expect('add_action')
+⋮----
+->with('media_folders_process_image_index', Mockery::type('array'));
+⋮----
+$this->logger->shouldReceive('logInfo')
+⋮----
+->with('Scheduling initial indexing cron job');
+⋮----
+$this->indexer->init();
+⋮----
+public function test_init_does_not_schedule_cron_when_already_scheduled()
+⋮----
+->andReturn(12345);
+⋮----
+->never();
+⋮----
+public function test_process_batch_handles_empty_image_list()
+⋮----
+// Mock database query
+$this->wpdb->shouldReceive('prepare')
+⋮----
+->andReturn('PREPARED_QUERY');
+⋮----
+$this->wpdb->shouldReceive('get_results')
+⋮----
+->with('PREPARED_QUERY')
+->andReturn([]);
+⋮----
+// Expect logging
+⋮----
+->with('No unprocessed images found');
+⋮----
+// Mock WordPress functions for cron check
+⋮----
+\Brain\Monkey\Functions\expect('wp_unschedule_event')
+⋮----
+->with(12345, 'media_folders_process_image_index');
+⋮----
+$this->indexer->processBatch();
+⋮----
+public function test_process_batch_processes_images_successfully()
+⋮----
+// Mock images data
+⋮----
+->andReturn($images);
+⋮----
+\Brain\Monkey\Functions\expect('get_attached_file')
+->twice()
+->andReturn('/path/to/image.jpg');
+⋮----
+\Brain\Monkey\Functions\expect('wp_generate_attachment_metadata')
+⋮----
+->andReturn(['width' => 800, 'height' => 600]);
+⋮----
+\Brain\Monkey\Functions\expect('wp_update_attachment_metadata')
+->twice();
+⋮----
+\Brain\Monkey\Functions\expect('get_option')
+⋮----
+->with('media_folders_index_progress', Mockery::type('array'))
+->andReturn(['total' => 10, 'processed' => 5, 'last_run' => 0]);
+⋮----
+\Brain\Monkey\Functions\expect('update_option')
+⋮----
+->with('media_folders_index_progress', Mockery::type('array'));
+⋮----
+// Mock cache
+$this->cache->shouldReceive('set')
+⋮----
+// Expect logging calls
+⋮----
+->with(Mockery::pattern('/Starting batch processing/'));
+⋮----
+$this->logger->shouldReceive('logImageProcessing')
+->times(4); // Start and complete for each image
+⋮----
+$this->logger->shouldReceive('logPerformance')
+->times(3); // Once for each image and once for the batch
+⋮----
+->with('Updated indexing progress', Mockery::type('array'));
+⋮----
+public function test_process_image_handles_wp_error()
+⋮----
+->andReturn(new WP_Error('test_error', 'Test error message'));
+⋮----
+->with(1, 'started', Mockery::type('array'));
+⋮----
+$this->logger->shouldReceive('logError')
+⋮----
+->with('Failed to generate attachment metadata', Mockery::type('array'));
+⋮----
+$result = $this->indexer->processImage($image);
+$this->assertFalse($result);
+````
+
+## File: tests/bootstrap.php
+````php
+/**
+ * PHPUnit bootstrap file
+ *
+ * @package MediaFolders
+ */
+⋮----
+// Give access to tests_add_filter() function.
+⋮----
+/**
+ * Manually load the plugin being tested.
+ */
+function _manually_load_plugin() {
+⋮----
+// Start up the WP testing environment.
+⋮----
+// Add Mockery setup for WordPress functions
+⋮----
+\Brain\Monkey\setUp();
+⋮----
+// Add teardown for Mockery
+⋮----
+\Brain\Monkey\tearDown();
+Mockery::close();
+⋮----
+// WordPress function mocks for testing
+⋮----
+function wp_get_attachment_metadata($attachment_id) {
 ````
 
 ## File: README.md
@@ -25730,16 +26263,123 @@ $bootstrap->init();
 printf('<div class="notice notice-error"><pre>%s</pre></div>', esc_html($e->getTraceAsString()));
 ````
 
+## File: src/Admin/AdminPage.php
+````php
+namespace MediaFolders\Admin;
+⋮----
+use MediaFolders\Database\Contracts\FolderRepositoryInterface;
+⋮----
+class AdminPage
+⋮----
+/**
+     * @var string
+     */
+⋮----
+/**
+     * @var FolderRepositoryInterface
+     */
+private FolderRepositoryInterface $folders;
+⋮----
+/**
+     * @param FolderRepositoryInterface $folders
+     */
+public function __construct(FolderRepositoryInterface $folders)
+⋮----
+/**
+     * Initialize admin page.
+     *
+     * @return void
+     */
+public function init(): void
+⋮----
+/**
+     * Register the menu page.
+     *
+     * @return void
+     */
+public function registerMenuPage(): void
+⋮----
+/**
+     * Enqueue admin assets.
+     *
+     * @param string $hook
+     * @return void
+     */
+public function enqueueAssets(string $hook): void
+⋮----
+if (!$this->isMediaFoldersPage($hook)) {
+⋮----
+$this->getAssetUrl('css/admin.css'),
+⋮----
+$this->getAssetUrl('js/admin.js'),
+⋮----
+// Add test script for API connectivity
+⋮----
+/**
+     * Render the admin page.
+     *
+     * @return void
+     */
+public function renderPage(): void
+⋮----
+/**
+     * Check if current page is media folders page.
+     *
+     * @param string $hook
+     * @return bool
+     */
+private function isMediaFoldersPage(string $hook): bool
+⋮----
+/**
+     * Get asset URL.
+     *
+     * @param string $path
+     * @return string
+     */
+private function getAssetUrl(string $path): string
+⋮----
+// For JS files, always look in build directory
+⋮----
+// For CSS files, check if built version exists, otherwise use assets
+````
+
+## File: src/Core/Container.php
+````php
+namespace MediaFolders\Core;
+⋮----
+use Closure;
+use RuntimeException;
+use Psr\Container\ContainerInterface;
+⋮----
+class Container implements ContainerInterface
+⋮----
+private array $bindings = [];
+private array $instances = [];
+⋮----
+public function bind(string $abstract, $concrete): void
+⋮----
+public function singleton(string $abstract, $concrete): void
+⋮----
+? $concrete($this)
+⋮----
+public function get(string $id)
+⋮----
+return $concrete instanceof Closure ? $concrete($this) : $concrete;
+⋮----
+public function has(string $id): bool
+````
+
 ## File: package.json
 ````json
 {
   "name": "media-folders",
   "version": "2.0.0",
   "description": "WordPress Media Folders Plugin - Efficient media library organization",
-  "scripts": {
+ "scripts": {
     "build": "wp-scripts build",
     "dist": "npm run build && node scripts/build-dist.js",
-    "start": "wp-scripts start",
+    "start": "wp-scripts start", 
+    "dev": "wp-scripts start",
     "lint:js": "wp-scripts lint-js",
     "lint:css": "wp-scripts lint-style",
     "format:js": "wp-scripts format-js",
@@ -25747,8 +26387,11 @@ printf('<div class="notice notice-error"><pre>%s</pre></div>', esc_html($e->getT
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:update": "jest --updateSnapshot"
-  },
+    "test:update": "jest --updateSnapshot",
+    "test:all": "npm run lint:js && npm run lint:css && npm run test"
+},
+
+
   "author": "David Pitchford",
   "license": "GPL-2.0-or-later",
   "dependencies": {
@@ -25807,35 +26450,90 @@ printf('<div class="notice notice-error"><pre>%s</pre></div>', esc_html($e->getT
 }
 ````
 
-## File: src/Core/Container.php
+## File: src/Providers/MediaServiceProvider.php
 ````php
-namespace MediaFolders\Core;
+namespace MediaFolders\Providers;
 ⋮----
-use Closure;
-use RuntimeException;
-use Psr\Container\ContainerInterface;
+use MediaFolders\Core\Container;
+use MediaFolders\Core\Contracts\ServiceProviderInterface;
+use MediaFolders\Core\Contracts\CacheInterface;
+use MediaFolders\Core\MediaHandler;
+use MediaFolders\Core\ImageIndexing\ImageIndexer;
+use MediaFolders\Core\ImageIndexing\IndexProgress;
+use MediaFolders\Core\Logging\ImageLogger;
+use MediaFolders\Database\Contracts\AttachmentRepositoryInterface;
+use MediaFolders\Http\RestRouter;
+use MediaFolders\Database\Contracts\FolderRepositoryInterface;
 ⋮----
-class Container implements ContainerInterface
+class MediaServiceProvider implements ServiceProviderInterface
 ⋮----
-private array $bindings = [];
-private array $instances = [];
+public function register(Container $container): void
 ⋮----
-public function bind(string $abstract, $concrete): void
+// Register ImageLogger first since ImageIndexer depends on it
+$container->singleton(ImageLogger::class, function() {
 ⋮----
-public function singleton(string $abstract, $concrete): void
+// Register RestRouter
+$container->singleton(RestRouter::class, function($container) {
 ⋮----
-? $concrete($this)
+$container->get(FolderRepositoryInterface::class),
+$container->get(AttachmentRepositoryInterface::class)
 ⋮----
-public function get(string $id)
+// Register MediaHandler
+$container->singleton(MediaHandler::class, function($container) {
 ⋮----
-return $concrete instanceof Closure ? $concrete($this) : $concrete;
+$container->get(CacheInterface::class),
+$container->get(AttachmentRepositoryInterface::class),
+$container->get(ImageLogger::class)    // Added the logger dependency
 ⋮----
-public function has(string $id): bool
+// Register ImageIndexer with all three required dependencies
+$container->singleton(ImageIndexer::class, function($container) {
+⋮----
+// Register IndexProgress
+$container->singleton(IndexProgress::class, function() {
+⋮----
+public function boot(Container $container): void
+⋮----
+// Register REST routes first
+⋮----
+$router = $container->get(RestRouter::class);
+⋮----
+$router->register();
+⋮----
+error_log('MediaFolders ERROR: ' . $e->getMessage());
+⋮----
+// Initialize the indexer
+⋮----
+$indexer = $container->get(ImageIndexer::class);
+$indexer->init();
+⋮----
+error_log('MediaFolders ERROR: Failed to initialize ImageIndexer - ' . $e->getMessage());
+⋮----
+// Handle new attachments
+⋮----
+error_log('MediaFolders ERROR: Failed to handle new attachment - ' . $e->getMessage());
+⋮----
+// Admin notices for indexing progress
+⋮----
+// Only show on media pages or our plugin page
+⋮----
+$progress = $container->get(IndexProgress::class);
+$percent = $progress->getPercentComplete();
+⋮----
+error_log('MediaFolders ERROR: Failed to show indexing progress - ' . $e->getMessage());
 ````
 
 ## File: src/Core/Bootstrap.php
 ````php
 namespace MediaFolders\Core;
+⋮----
+use MediaFolders\Providers\MediaServiceProvider;
+use MediaFolders\Http\RestRouter;
+use MediaFolders\Database\FolderRepository;
+use MediaFolders\Database\AttachmentRepository;
+use MediaFolders\Database\Contracts\FolderRepositoryInterface;
+use MediaFolders\Database\Contracts\AttachmentRepositoryInterface;
+use MediaFolders\Core\Contracts\CacheInterface;
+use MediaFolders\Core\Cache\DatabaseCache;
 ⋮----
 class Bootstrap
 ⋮----
@@ -25857,16 +26555,40 @@ $this->container->singleton(Container::class, $this->container);
 // Register database services
 $this->container->singleton('wpdb', $wpdb);
 ⋮----
+// Register cache implementation
+$this->container->singleton(CacheInterface::class, function($container) {
+return new DatabaseCache($container->get('wpdb'));
+⋮----
 // Register repositories
 $this->container->bind(
 ⋮----
-return new \MediaFolders\Database\FolderRepository($container->get('wpdb'));
+return new FolderRepository($container->get('wpdb'));
+⋮----
+return new AttachmentRepository($container->get('wpdb'));
+⋮----
+// Register REST Router
+$this->container->singleton(RestRouter::class, function($container) {
+⋮----
+$container->get(FolderRepositoryInterface::class),
+$container->get(AttachmentRepositoryInterface::class)
+⋮----
+// Register and boot the MediaServiceProvider
+⋮----
+$provider->register($this->container);
+$provider->boot($this->container);
 ⋮----
 private function initializeWordPress(): void
 ⋮----
+// Register REST API routes
+⋮----
+$router = $this->container->get(RestRouter::class);
+$router->register();
+⋮----
+error_log('MediaFolders ERROR: ' . $e->getMessage());
+⋮----
 // Initialize admin page
 $adminPage = new \MediaFolders\Admin\AdminPage(
-$this->container->get(\MediaFolders\Database\Contracts\FolderRepositoryInterface::class)
+$this->container->get(FolderRepositoryInterface::class)
 ⋮----
 $adminPage->init();
 ````

@@ -36,31 +36,40 @@ defined('ABSPATH') || exit;
         <div class="welcome-content">
             <h2><?php _e('Get Started with Media Folders', 'media-folders'); ?></h2>
             <p class="about-description">
-                <?php _e('Organize your WordPress media library into folders automatically.', 'media-folders'); ?>
+                <?php _e('Media Folders helps you organize your WordPress media library into easy-to-manage folders. Streamline your workflow, find files faster, and keep your library tidy — all within the native WordPress admin.', 'media-folders'); ?>
             </p>
 
+            <ul class="media-folders-benefits">
+                <li><span class="dashicons dashicons-category"></span> <?php _e('Organize images, documents, and media into folders', 'media-folders'); ?></li>
+                <li><span class="dashicons dashicons-search"></span> <?php _e('Quickly search and filter your media', 'media-folders'); ?></li>
+                <li><span class="dashicons dashicons-update"></span> <?php _e('Index your existing media library automatically', 'media-folders'); ?></li>
+                <li><span class="dashicons dashicons-admin-settings"></span> <?php _e('Seamless integration with the WordPress admin', 'media-folders'); ?></li>
+            </ul>
+
             <div class="welcome-actions">
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline;">
                     <?php wp_nonce_field('media_folders_index_action', 'media_folders_nonce'); ?>
                     <input type="hidden" name="action" value="media_folders_start_index">
-                    
                     <button type="submit" class="button button-primary button-hero">
                         <span class="dashicons dashicons-download"></span>
                         <?php _e('Index Current Files', 'media-folders'); ?>
                     </button>
-                    
-                    <a href="<?php echo esc_url(admin_url('admin.php?page=media-folders&skip_index=1')); ?>" 
-                       class="button button-secondary button-hero">
-                        <?php _e('Skip Indexing', 'media-folders'); ?>
-                    </a>
-                </div>
-
-                <div class="welcome-help">
-                    <p>
-                        <?php _e('You can always start indexing later from the Index Images tab.', 'media-folders'); ?>
-                    </p>
-                </div>
+                </form>
+                <a href="<?php echo esc_url(admin_url('admin.php?page=media-folders&skip_index=1')); ?>" class="button button-secondary button-hero" style="margin-left:10px;">
+                    <?php _e('Skip Indexing', 'media-folders'); ?>
+                </a>
             </div>
+
+            <div class="welcome-help" style="margin-top:2em;">
+                <p>
+                    <span class="dashicons dashicons-info"></span> <?php _e('You can always start indexing later from the Index Images tab.', 'media-folders'); ?>
+                </p>
+                <p>
+                    <span class="dashicons dashicons-editor-help"></span> <?php _e('Need help? Visit our documentation or open a support ticket.', 'media-folders'); ?>
+                </p>
+            </div>
+            <!-- React App Mount Point (if needed) -->
+            <div id="media-folders-app"></div>
         </div>
     <?php endif; ?>
 </div>
